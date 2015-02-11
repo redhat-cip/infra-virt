@@ -24,8 +24,6 @@
 #        gid = demo
 #        path = /home/demo/incoming
 #        post-xfer exec = su - demo -c /usr/local/bin/prepare_build_dir.sh
-
-cd $HOME/building
 export LOG_DIR="/srv/html/logs/${USER}/"
 [ -d ${LOG_DIR} ] || mkdir ${LOG_DIR}
 find ${LOG_DIR} -mindepth 1 -exec rm -rf {} \;
@@ -33,7 +31,7 @@ find ${LOG_DIR} -mindepth 1 -exec rm -rf {} \;
 [ -z $HOME ] && exit 1
 [ -f ~/.ssh/id_rsa ] || ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
 date -R > $LOG_DIR/build.txt
-pkill -P $(cat $HOME/build.pid)
+[ -f $HOME/build.pid ] && pkill -P $(cat $HOME/build.pid)
 [ -d $HOME/building ] && rm -rf $HOME/building
 cp -R $HOME/incoming $HOME/building
 
@@ -46,7 +44,7 @@ fi
 
 git fetch --all
 git checkout master
-git branch -D goneri-wip
+git branch -D goneri-wip || true
 git reset --hard
 git clean -ffdx
 git checkout -b goneri-wip goneri/goneri-wip
