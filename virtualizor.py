@@ -108,9 +108,12 @@ class Hypervisor(object):
     def create_networks(self, conf, install_server_info):
         net_definitions = {
             ("%s_sps" % conf.prefix): {},
-            ("%s" % conf.public_network): 
-                {"dhcp":{"address":"192.168.140.1","netmask":"255.255.255.0",
-                         "range":{"ipstart":"192.168.140.2","ipend":"192.168.140.254"}}}
+            ("%s" % conf.public_network):
+                {"dhcp": {"address": "192.168.140.1",
+                          "netmask": "255.255.255.0",
+                          "range": {
+                                 "ipstart": "192.168.140.2",
+                                 "ipend": "192.168.140.254"}}}
         }
 
         existing_networks = ([n.name() for n in self.conn.listAllNetworks()])
