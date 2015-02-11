@@ -123,7 +123,7 @@ class TestVirtualizor(testtools.TestCase):
         self.virtualizor.main(['--replace', 'virt_platform.yml.sample', 'bar',
                                '--pub-key-file', 'virt_platform.yml.sample'])
         self.assertEqual(sub_call.call_count, 18)
-        self.assertEqual(libvirt_conn.networkCreateXML.call_count, 1)
+        self.assertEqual(libvirt_conn.networkCreateXML.call_count, 2)
         self.assertEqual(libvirt_conn.defineXML.call_count, 4)
 
     @mock.patch('virtualizor.subprocess.call')
