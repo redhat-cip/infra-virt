@@ -115,7 +115,7 @@ class TestVirtualizor(testtools.TestCase):
                   '30G'])
         ])
         self.assertEqual(sub_call.call_count, 14)
-        self.assertEqual(libvirt_conn.networkCreateXML.call_count, 0)
+        self.assertEqual(libvirt_conn.networkCreateXML.call_count, 1)
         self.assertEqual(libvirt_conn.defineXML.call_count, 3)
 
     @mock.patch('virtualizor.subprocess.call')
@@ -125,17 +125,6 @@ class TestVirtualizor(testtools.TestCase):
         self.assertEqual(sub_call.call_count, 18)
         self.assertEqual(libvirt_conn.networkCreateXML.call_count, 2)
         self.assertEqual(libvirt_conn.defineXML.call_count, 4)
-
-    @mock.patch('virtualizor.subprocess.call')
-    def test_main_with_wrong_public_network(self, sub_call):
-        def raise_libvirt_exception(a):
-            raise self.virtualizor.libvirt.libvirtError()
-        libvirt_conn.networkLookupByName = raise_libvirt_exception
-        self.assertRaises(self.virtualizor.Hypervisor.MissingPublicNetwork,
-                          self.virtualizor.main,
-                          ['--public_network', 'nothing',
-                           'virt_platform.yml.sample', 'bar'])
-
 
 if __name__ == '__main__':
     unittest.main()
