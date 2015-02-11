@@ -109,9 +109,8 @@ class Hypervisor(object):
         net_definitions = {
             ("%s_sps" % conf.prefix): {},
             ("%s" % conf.public_network): 
-                {"dhcp":{"address":"10.0.0.1","netmask":"255.255.255.0",
-                         "hosts":{},
-                         "range":{"ipstart":"10.0.0.2","ipend":"10.0.0.254"}}}
+                {"dhcp":{"address":"192.168.140.1","netmask":"255.255.255.0",
+                         "range":{"ipstart":"192.168.140.2","ipend":"192.168.140.254"}}}
         }
 
         existing_networks = ([n.name() for n in self.conn.listAllNetworks()])
@@ -420,10 +419,6 @@ class Network(object):
   </forward>
   <ip address='{{ dhcp.address }}' netmask='{{ dhcp.netmask }}'>
     <dhcp>
-{% for host in dhcp.hosts %}
-      <range start='{{ host.ip }}' end='{{ host.ip }}' />
-      <host mac='{{ host.mac }}' name='{{ host.name }}' ip='{{ host.ip }}'/>
-{% endfor %}
 {%if dhcp.range is defined %}
       <range start='{{ dhcp.range.ipstart }}' end='{{ dhcp.range.ipend }}' />
 {% endif %}
