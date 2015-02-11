@@ -195,7 +195,9 @@ class Host(object):
 {% if is_install_server is defined %}
     <disk type='file' device='disk'>
       <driver name='qemu' type='raw'/>
-      <source file='/var/lib/libvirt/images/cloud-init.iso'/>
+      <source
+        file='/var/lib/libvirt/images/{{
+          hostname_with_prefix }}_cloud-init.iso'/>
       <target dev='vdz' bus='virtio'/>
     </disk>
 {% endif %}
@@ -351,19 +353,22 @@ local-hostname: {{ hostname }}
             'user-data': env.from_string(Host.user_data_template_string),
             'meta-data': env.from_string(Host.meta_data_template_string)}
         # TODO(Gonéri): use mktemp
-        self.hypervisor.call("mkdir", "-p", "/tmp/mydata")
+        data_dir = "/tmp/%s_data" % self.hostname_with_prefix
+        self.hypervisor.call("mkdir", "-p", data_dir)
         for name in sorted(contents):
             fd = tempfile.NamedTemporaryFile()
             fd.write(contents[name].render(meta))
             fd.seek(0)
             fd.flush()
-            self.hypervisor.push(fd.name, '/tmp/mydata/' + name)
+            self.hypervisor.push(fd.name, data_dir + '/' + name)
 
         self.hypervisor.call(
             'genisoimage', '-quiet', '-output',
-            Host.host_libvirt_image_dir + '/cloud-init.iso',
+            "%s/%s_cloud-init.iso" % (
+                Host.host_libvirt_image_dir,
+                self.hostname_with_prefix),
             '-volid', 'cidata', '-joliet', '-rock',
-            '/tmp/mydata/user-data', '/tmp/mydata/meta-data')
+            data_dir + '/user-data', data_dir + '/meta-data')
 
     def register_disks(self, definition):
         cpt = 0
