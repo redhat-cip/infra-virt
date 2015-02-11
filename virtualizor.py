@@ -88,7 +88,7 @@ def get_conf(argv=sys.argv):
                         'another virtualizor instance. Thanks to this '
                         'parameter, the user can run as virtualizor as '
                         'needed on the same machine.')
-    parser.add_argument('--public_network', default='default', type=str,
+    parser.add_argument('--public_network', default='nat', type=str,
                         help='allow the user to pass the name of a libvirt '
                         'NATed network that will be used as a public network '
                         'for the install-server. This public network will by '
@@ -105,17 +105,15 @@ class Hypervisor(object):
         self.conn = libvirt.open('qemu+ssh://root@%s/system' %
                                  conf.target_host)
 
-        try:
-            self.public_net = self.conn.networkLookupByName(
-                conf.public_network)
-        except libvirt.libvirtError:
-            logging.error("public_network %s should be active and have "
-                          "internal DHCP turned on." % (conf.public_network))
-            raise self.MissingPublicNetwork()
-
     def create_networks(self, conf, install_server_info):
         net_definitions = {
-            ("%s_sps" % conf.prefix): {}
+            ("%s_sps" % conf.prefix): {},
+            ("%s" % conf.public_network):
+                {"dhcp": {"address": "192.168.140.1",
+                          "netmask": "255.255.255.0",
+                          "range": {
+                                 "ipstart": "192.168.140.2",
+                                 "ipend": "192.168.140.254"}}}
         }
 
         existing_networks = ([n.name() for n in self.conn.listAllNetworks()])
@@ -126,8 +124,11 @@ class Hypervisor(object):
                 logging.info("Cleaning network %s." % netname)
                 exists = False
             if not exists:
+                logging.info("Creating network %s." % netname)
                 network = Network(netname, net_definitions[netname])
                 self.conn.networkCreateXML(network.dump_libvirt_xml())
+        self.public_net = self.conn.networkLookupByName(
+                                conf.public_network)
 
     def wait_for_install_server(self, hypervisor, mac):
         while True:
@@ -426,10 +427,9 @@ class Network(object):
   </forward>
   <ip address='{{ dhcp.address }}' netmask='{{ dhcp.netmask }}'>
     <dhcp>
-{% for host in dhcp.hosts %}
-      <range start='{{ host.ip }}' end='{{ host.ip }}' />
-      <host mac='{{ host.mac }}' name='{{ host.name }}' ip='{{ host.ip }}'/>
-{% endfor %}
+{%if dhcp.range is defined %}
+      <range start='{{ dhcp.range.ipstart }}' end='{{ dhcp.range.ipend }}' />
+{% endif %}
     </dhcp>
   </ip>
 {% endif %}
