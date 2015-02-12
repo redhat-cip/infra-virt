@@ -39,7 +39,7 @@ platform=virt_platform.yml
 TIMEOUT_ITERATION=${TIMEOUT_ITERATION:-"150"}
 LOG_DIR=${LOG_DIR:-"$(pwd)/logs"}
 
-SSHOPTS="-oBatchMode=yes -oCheckHostIP=no -oHashKnownHosts=no  -oStrictHostKeyChecking=no -oPreferredAuthentications=publickey  -oChallengeResponseAuthentication=no -oKbdInteractiveDevices=no -oUserKnownHostsFile=/dev/null"
+SSHOPTS="-oBatchMode=yes -oCheckHostIP=no -oHashKnownHosts=no  -oStrictHostKeyChecking=no -oPreferredAuthentications=publickey  -oChallengeResponseAuthentication=no -oKbdInteractiveDevices=no -oUserKnownHostsFile=/dev/null -oControlPath=~/.ssh/control-%r@%h:%p -oControlMaster=auto -oControlPersist=30"
 
 upload_logs() {
     [ -f ~/openrc ] || return
@@ -93,7 +93,8 @@ done
 set -eux
 scp $SSHOPTS extract-archive.sh functions root@$installserverip:/tmp
 
-ssh $SSHOPTS root@$installserverip "echo -e 'RSERV=localhost\nRSERV_PORT=873' >> /var/lib/edeploy/conf"
+ssh $SSHOPTS root@$installserverip "
+[ -d /var/lib/edeploy ] && echo -e 'RSERV=localhost\nRSERV_PORT=873' >> /var/lib/edeploy/conf"
 
 ssh $SSHOPTS root@$installserverip /tmp/extract-archive.sh
 ssh $SSHOPTS root@$installserverip rm /tmp/extract-archive.sh /tmp/functions
