@@ -120,6 +120,9 @@ class Hypervisor(object):
             self.conn.networkCreateXML(pub_net.dump_libvirt_xml())
         self.public_net = self.conn.networkLookupByName(
             conf.public_network)
+        self.public_net.setAutostart(True)
+        if not self.public_net.isActive():
+            self.public_net.create()
 
         net_definitions = {("%s_sps" % conf.prefix): {}}
         for netname in net_definitions:
