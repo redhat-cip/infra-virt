@@ -93,7 +93,8 @@ done
 set -eux
 scp $SSHOPTS extract-archive.sh functions root@$installserverip:/tmp
 
-ssh $SSHOPTS root@$installserverip "echo -e 'RSERV=localhost\nRSERV_PORT=873' >> /var/lib/edeploy/conf"
+ssh $SSHOPTS root@$installserverip "
+[ -d /var/lib/edeploy ] && echo -e 'RSERV=localhost\nRSERV_PORT=873' >> /var/lib/edeploy/conf"
 
 ssh $SSHOPTS root@$installserverip /tmp/extract-archive.sh
 ssh $SSHOPTS root@$installserverip rm /tmp/extract-archive.sh /tmp/functions
