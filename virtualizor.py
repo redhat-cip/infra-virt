@@ -106,17 +106,22 @@ class Hypervisor(object):
                                  conf.target_host)
 
     def create_networks(self, conf, install_server_info):
-        net_definitions = {
-            ("%s_sps" % conf.prefix): {},
-            ("%s" % conf.public_network):
-                {"dhcp": {"address": "192.168.140.1",
-                          "netmask": "255.255.255.0",
-                          "range": {
-                                 "ipstart": "192.168.140.2",
-                                 "ipend": "192.168.140.254"}}}
-        }
-
         existing_networks = ([n.name() for n in self.conn.listAllNetworks()])
+        # Ensure the public_network is defined, we don't replace this network,
+        # even if --replace is used because other VM may by connected to the
+        # same networks.
+        if conf.public_network not in existing_networks:
+            pub_net = Network(conf.public_network, {
+                "dhcp": {"address": "192.168.140.1",
+                         "netmask": "255.255.255.0",
+                         "range": {
+                             "ipstart": "192.168.140.2",
+                             "ipend": "192.168.140.254"}}})
+            self.conn.networkCreateXML(pub_net.dump_libvirt_xml())
+        self.public_net = self.conn.networkLookupByName(
+            conf.public_network)
+
+        net_definitions = {("%s_sps" % conf.prefix): {}}
         for netname in net_definitions:
             exists = netname in existing_networks
             if exists and conf.replace:
@@ -128,7 +133,7 @@ class Hypervisor(object):
                 network = Network(netname, net_definitions[netname])
                 self.conn.networkCreateXML(network.dump_libvirt_xml())
         self.public_net = self.conn.networkLookupByName(
-                                conf.public_network)
+            conf.public_network)
 
     def wait_for_install_server(self, hypervisor, mac):
         while True:
