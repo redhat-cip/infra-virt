@@ -162,8 +162,8 @@ class Host(object):
 <domain type='kvm'>
   <name>{{ hostname_with_prefix }}</name>
   <uuid>{{ uuid }}</uuid>
-  <memory unit='KiB'>{{ memory }}</memory>
-  <currentmemory unit='KiB'>{{ memory }}</currentmemory>
+  <memory unit='GB'>{{ memory }}</memory>
+  <currentmemory unit='GB'>{{ memory }}</currentmemory>
   <vcpu>{{ ncpus }}</vcpu>
   <os>
     <smbios mode='sysinfo'/>
@@ -307,7 +307,7 @@ local-hostname: {{ hostname }}
                      'hostname_with_prefix':
                          definition['hostname_with_prefix'],
                      'uuid': str(uuid.uuid1()),
-                     'memory': 4194304,
+                     'memory': 8,
                      'ncpus': 1,
                      'cpus': [], 'disks': [], 'nics': []}
 
