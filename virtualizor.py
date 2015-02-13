@@ -504,6 +504,8 @@ def main(argv=sys.argv[1:]):
             logging.info("a host called %s is already defined, skipping "
                          "(see: --replace)." % hostname_with_prefix)
 
+    logging.info("Waiting for install-server DHCP query with MAC %s" %
+                 install_server_info['mac'])
     ip = hypervisor.wait_for_install_server(
         hypervisor, install_server_info['mac'])
 
