@@ -4,10 +4,35 @@
 The virtualization directory contains the tools which aims to standardize the way
 we test an architecture in a virtual environment.
 
-## Pre-requesites
+## Prerequisites
+
+On the local machine:
+
+You must install libvirt-python first.
 
 ```sh
-$ pip install -r requirements.txt
+pip install -r requirements.txt
+```
+
+On the Hypervisor:
+
+We use a Fedora 21 with the following extra packages:
+
+- libvirt
+- mtools
+- qemu-kvm
+
+You will need to disable firewalld and enable libvirt:
+
+```sh
+sudo systemctl enable libvirtd
+sudo systemctl start libvirtd
+
+sudo service iptables save
+sudo systemctl disable firewalld
+sudo systemctl enable iptables
+sudo systemctl stop firewalld
+sudo systemctl start iptables
 ```
 
 ### Collector
