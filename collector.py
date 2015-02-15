@@ -37,7 +37,7 @@ def _get_yaml_content(path):
         sys.exit(1)
 
 
-def collect(config_path):
+def collect(config_path, qcow, sps_version):
     # check config directory path
     if not os.path.exists(config_path):
         print("Error: --config-dir='%s' does not exist." % config_path)
@@ -58,6 +58,11 @@ def collect(config_path):
     for hostname in global_conf["hosts"]:
         # construct the host virtual configuration
         virt_platform["hosts"][hostname] = state_obj.hardware_info(hostname)
+        img = "%s-%s.img.qcow2" % (global_conf["hosts"][hostname]["profile"],
+                                   sps_version)
+        if (qcow and len(virt_platform["hosts"][hostname]["disks"]) > 0) or \
+            global_conf["hosts"][hostname]["profile"] == "install-server":
+            virt_platform["hosts"][hostname]["disks"][0]["image"] = img
 
         # add the profile
         virt_platform["hosts"][hostname]["profile"] = \
@@ -110,10 +115,16 @@ def main():
     cli_parser.add_argument('--sps-version',
                             required=True,
                             help='The SpinalStack version.')
+    cli_parser.add_argument('--qcow',
+                            required=False,
+                            default=False,
+                            action="store_true",
+                            help='Boot on qcow image.')
+
     cli_arguments = cli_parser.parse_args()
 
-    virt_platform = collect(cli_arguments.config_dir)
-    virt_platform["version"] = cli_arguments.sps_version
+    virt_platform = collect(cli_arguments.config_dir, cli_arguments.qcow,
+                            cli_arguments.sps_version)
     save_virt_platform(virt_platform,
                        cli_arguments.output_dir)
 
