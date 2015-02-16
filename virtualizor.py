@@ -161,8 +161,8 @@ class Host(object):
 <domain type='kvm'>
   <name>{{ hostname_with_prefix }}</name>
   <uuid>{{ uuid }}</uuid>
-  <memory unit='GB'>{{ memory }}</memory>
-  <currentmemory unit='GB'>{{ memory }}</currentmemory>
+  <memory unit='B'>{{ memory }}</memory>
+  <currentmemory unit='B'>{{ memory }}</currentmemory>
   <vcpu>{{ ncpus }}</vcpu>
   <os>
     <smbios mode='sysinfo'/>
