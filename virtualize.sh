@@ -78,6 +78,7 @@ fi
 $ORIG/virtualizor.py "$platform" $virthost --replace --prefix ${PREFIX} --public_network nat --replace --pub-key-file $pubfile
 # TODO(Gonéri): We need a better solution to pass the IP from virtualizor.
 installserverip=$(ssh $SSHOPTS root@$virthost "awk '/ os-ci-test4/ {print \$3}' /var/lib/libvirt/dnsmasq/nat.leases"|head -n 1)
+gateway=$(ssh $SSHOPTS root@$virthost "awk '/ router/ {print \$3}' /var/lib/libvirt/dnsmasq/nat.leases"|head -n 1)
 
 retry=0
 while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner $ctdir/top/ root@$installserverip:/; do
@@ -92,7 +93,7 @@ while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner $ctdir/top/ root@$install
 done
 
 set -eux
-scp $SSHOPTS extract-archive.sh functions root@$installserverip:/tmp
+scp $SSHOPTS ${ctdir}/extract-archive.sh ${ctdir}/functions root@$installserverip:/tmp
 
 ssh $SSHOPTS root@$installserverip "
 [ -d /var/lib/edeploy ] && echo -e 'RSERV=localhost\nRSERV_PORT=873' >> /var/lib/edeploy/conf"
