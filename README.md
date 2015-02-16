@@ -95,13 +95,20 @@ optional arguments:
 ### Example
 
 ```sh
-$ ./config-tools/download.sh I.1.3.0 deployment-3nodes-D7.yml version=D7-I.1.3.0
+$ cd ~
+$ git clone https://github.com/enovance/config-tools.git
+$ cd config-tools/
+$ git checkout I.1.3
+$ ./download.sh I.1.3.0 deployment-3nodes-D7.yml version=D7-I.1.3.0
 ```
 
 It generates a directory 'top/' in the current directory.
 
 ```sh
-$ ./collector.py --config-dir ./top/etc --sps-version D7-I.1.3.0
+$ cd ~
+$ git clone https://github.com/enovance/virt-infra.git
+$ cd virt-infra/
+$ ./collector.py --config-dir ~/config-tools/top/etc --sps-version D7-I.1.3.0
 Virtual platform generated successfully at 'virt_platform.yml' !
 ```
 
@@ -109,5 +116,13 @@ It will generate a file 'virt_platform.yml' which describe the corresponding vir
 platform. You may take a look at a sample in the virtualization directory.
 
 ```sh
+$ cd ~/virt-infra/
 $ ./virtualizor.py virt_platform.yml my-hypervisor-node --replace --pub-key-file ~/.ssh/boa.pub
+```
+
+or
+
+```sh
+$ cd ~/virt-infra/
+$ ./virtualise.sh ~/config-tools/ ~/config-tools/env/deployment-3nodes-D7.yml my-hypervisor-node
 ```
