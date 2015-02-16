@@ -27,7 +27,7 @@ _CONFIG_PATH = "%s/data" % _MODULE_DIR
 class TestCollector(unittest.TestCase):
 
     def test_collect(self):
-        virt_platform = collector.collect(_CONFIG_PATH)
+        virt_platform = collector.collect(_CONFIG_PATH, False, "sps_version")
         self.assertTrue("hosts" in virt_platform)
         self.assertEqual(len(virt_platform["hosts"]), 4)
 
