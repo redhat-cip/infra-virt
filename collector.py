@@ -76,16 +76,19 @@ def collect(config_path, qcow, sps_version):
     # so far, the nodes are described excepted the install-server
     # the code below adds the install-server from the global conf.
     for hostname in global_conf["hosts"]:
-        if global_conf["hosts"][hostname]["profile"] == "install-server":
-            # add the admin_network config
-            admin_network = global_conf["config"]["admin_network"]
-            admin_network = netaddr.IPNetwork(admin_network)
-            nics = [{"name": "eth0",
-                     "ip": global_conf["hosts"][hostname]["ip"],
-                     "network": str(admin_network.network),
-                     "netmask": str(admin_network.netmask)}]
-            virt_platform["hosts"][hostname]["nics"] = nics
-            break
+        admin_network = global_conf["config"]["admin_network"]
+        admin_network = netaddr.IPNetwork(admin_network)
+        try:
+            nics = virt_platform["hosts"][hostname]["nics"]
+        except KeyError:
+            nics = [{}]
+
+        nics[0].update({
+            "name": "eth0",
+            "ip": global_conf["hosts"][hostname]["ip"],
+            "network": str(admin_network.network),
+            "netmask": str(admin_network.netmask)})
+        virt_platform["hosts"][hostname]["nics"] = nics
 
     return virt_platform
 
