@@ -120,7 +120,6 @@ class Hypervisor(object):
             self.conn.networkCreateXML(pub_net.dump_libvirt_xml())
         self.public_net = self.conn.networkLookupByName(
             conf.public_network)
-        self.public_net.setAutostart(True)
         if not self.public_net.isActive():
             self.public_net.create()
 
@@ -138,7 +137,7 @@ class Hypervisor(object):
         self.public_net = self.conn.networkLookupByName(
             conf.public_network)
 
-    def wait_for_install_server(self, hypervisor, mac):
+    def wait_for_lease(self, hypervisor, mac):
         while True:
             for lease in hypervisor.public_net.DHCPLeases():
                 if lease['mac'] == mac:
@@ -162,8 +161,8 @@ class Host(object):
 <domain type='kvm'>
   <name>{{ hostname_with_prefix }}</name>
   <uuid>{{ uuid }}</uuid>
-  <memory unit='GB'>{{ memory }}</memory>
-  <currentmemory unit='GB'>{{ memory }}</currentmemory>
+  <memory unit='B'>{{ memory }}</memory>
+  <currentmemory unit='B'>{{ memory }}</currentmemory>
   <vcpu>{{ ncpus }}</vcpu>
   <os>
     <smbios mode='sysinfo'/>
@@ -286,7 +285,8 @@ local-hostname: {{ hostname }}
 
 """
 
-    def __init__(self, hypervisor, conf, definition, install_server_info):
+    def __init__(self, hypervisor, conf, definition,
+                 install_server_info, gateway_info):
         self.hypervisor = hypervisor
         self.conf = conf
         self.hostname = definition['hostname']
@@ -307,10 +307,18 @@ local-hostname: {{ hostname }}
             self.meta[k] = definition[k]
 
         if definition['profile'] == 'install-server':
-            logging.info("  This is the install-server")
+            logging.info("  Configuring the install-server")
             self.meta['is_install_server'] = True
             definition['nics'].append({
                 'mac': install_server_info['mac'],
+                'network_name': conf.public_network
+            })
+
+        if definition['profile'] == 'gateway':
+            logging.info("  Configuring the Gateway")
+            self.meta['is_gateway'] = True
+            definition['nics'].append({
+                'mac': gateway_info['mac'],
                 'network_name': conf.public_network
             })
 
@@ -450,12 +458,12 @@ class Network(object):
         return self.template.render(self.meta)
 
 
-def get_install_server_info(hosts_definition):
+def get_profile_info(hosts_definition, profile):
     for hostname, definition in six.iteritems(hosts_definition['hosts']):
-        if definition.get('profile', '') == 'install-server':
+        if definition.get('profile', '') == profile:
             break
 
-    logging.info("install-server (%s)" % (hostname))
+    logging.info("%s (%s)" % (profile, hostname))
     admin_nic_info = definition['nics'][0]
     network = ipaddress.ip_network(
         unicode(
@@ -476,7 +484,8 @@ def main(argv=sys.argv[1:]):
     conf = get_conf(argv)
     hosts_definition = yaml.load(open(conf.input_file, 'r'))
     hypervisor = Hypervisor(conf)
-    install_server_info = get_install_server_info(hosts_definition)
+    install_server_info = get_profile_info(hosts_definition, "install-server")
+    gateway_info = get_profile_info(hosts_definition, "gateway")
     hypervisor.create_networks(conf, install_server_info)
 
     hosts = hosts_definition['hosts']
@@ -496,7 +505,8 @@ def main(argv=sys.argv[1:]):
                 dom.undefine()
             exists = False
         if not exists:
-            host = Host(hypervisor, conf, definition, install_server_info)
+            host = Host(hypervisor, conf, definition,
+                        install_server_info, gateway_info)
             hypervisor.conn.defineXML(host.dump_libvirt_xml())
             dom = hypervisor.conn.lookupByName(hostname_with_prefix)
             dom.create()
@@ -506,10 +516,17 @@ def main(argv=sys.argv[1:]):
 
     logging.info("Waiting for install-server DHCP query with MAC %s" %
                  install_server_info['mac'])
-    ip = hypervisor.wait_for_install_server(
+    ip = hypervisor.wait_for_lease(
         hypervisor, install_server_info['mac'])
 
     logging.info("Install-server up and running with IP: %s" % ip)
+
+    logging.info("Waiting for Gateway DHCP query with MAC %s" %
+                 gateway_info['mac'])
+    ip = hypervisor.wait_for_lease(
+        hypervisor, gateway_info['mac'])
+
+    logging.info("Gateway up and running with IP: %s" % ip)
 
 
 if __name__ == '__main__':
