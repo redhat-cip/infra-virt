@@ -60,9 +60,11 @@ def collect(config_path, qcow, sps_version):
         virt_platform["hosts"][hostname] = state_obj.hardware_info(hostname)
         img = "%s-%s.img.qcow2" % (global_conf["hosts"][hostname]["profile"],
                                    sps_version)
-        if (qcow and len(virt_platform["hosts"][hostname]["disks"]) > 0) or \
-            global_conf["hosts"][hostname]["profile"] == "install-server":
-            virt_platform["hosts"][hostname]["disks"][0]["image"] = img
+        if qcow or \
+           global_conf["hosts"][hostname]["profile"] == "install-server":
+            if 'disks' not in virt_platform["hosts"][hostname]:
+                virt_platform["hosts"][hostname]["disks"] = [{'size': '15Gi'}]
+            virt_platform["hosts"][hostname]["disks"][0]['image'] = img
 
         # add the profile
         virt_platform["hosts"][hostname]["profile"] = \
