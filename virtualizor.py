@@ -360,7 +360,7 @@ local-hostname: {{ hostname }}
                      'hostname_with_prefix':
                          definition['hostname_with_prefix'],
                      'uuid': str(uuid.uuid1()),
-                     'memory': 8,
+                     'memory': 8 * 1024 ** 2,
                      'ncpus': 1,
                      'cpus': [], 'disks': [], 'nics': []}
         self.disk_cpt = 0
