@@ -259,6 +259,9 @@ write_files:
       IPADDR={{ nic.ip }}
       NETWORK={{ nic.network }}
       NETMASK={{ nic.netmask }}
+{% if nic.gateway is defined %}
+      GATEWAY={{ nic.gateway }}
+{% endif %}
 {% else %}
       BOOTPROTO=dhcp
 {% endif %}
@@ -271,6 +274,68 @@ write_files:
   - path: /etc/sysctl.conf
     content: |
       net.ipv4.ip_forward = 1
+  - path: /root/.ssh/id_rsa
+    permissions: 0400
+    owner: root:root
+    content: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEowIBAAKCAQEA47rZ0qSOqzLIspnMFvfwSYsms00nJkmsLHLem/9JsvqM2brk
+        0nfUDzr/6BbieH4HoC+GZMnhh21gX0C/nk/fYFLP+0fY2KbRObbCbdZGlOCguMcJ
+        QgcKz0sU9mms4+bPcmnil+j8ljP+KjrBDXiZtl6sYj0CnoD3MlVZfHmLI20xa0aO
+        CUvjLDsgTjVFhtRDdEHXcl4XHPJ5RKT9sEBlKbhCmI/6O1pNxEGEWvwwQE08+9Xl
+        9rJ08/nb/hIuzhTGJdEX/u7jwidxnYbzFyPdgs4jCHDAciqUorlgd/yw6Hs0z2IY
+        GxD9CPs6shx8aRmVLGMf+YnOUQHVD1Hi0FrBFwIDAQABAoIBAQDXekZ/DJu+G7hR
+        XjsBhKrFO7hrsdYYYV9bU3mVS7I1euNpZXD8QMvTeXUI6xZxAnc+t5lHpsoSNYkZ
+        uA9XwaXP46vNzQa+wOF55ZcFDNoOJpmNHS+CXV16FUYJfqZLomqpjM0OBjNyAFI/
+        LQbcMz/mkqAz+ByRU+ASrTWWFP91jSRSWAO/xmRcgqmh02TWlVJRROS3CsWz9C47
+        Ag1diZ4r2d1gFwnc6ZfSTNActLgUNU2NyDsFL4qHipWssGqoclfhsIdL1CLmhTix
+        t8tO0QBSw60H2XqQ0Y77MNfEYgdqvp6XRlB+Uw9Qjf3Y0ukA6ekD3BGfTcaNcq4b
+        4N1WUmTpAoGBAPYCzaWRcXHCJ/0WAUhggvy1kKbAdEtoJfkS3lva9pPgyRx+cTrW
+        98az6NhdD774O3F1GT8RemoX/9JpX0Z2HG3+f0r2vcSqhsyjJSJF6dEU3DMFte+G
+        A67iHnmmfelc1tZKrGuqfrGnFeMQgrmj3ugekKAoyeybPXkd7YTC9cidAoGBAOz6
+        Bbpmvrqr41TOgZCssFjteBNDvDU9NfHtpkgAx7HYkNp4xaWPwlBBydS6Ubsx5RQJ
+        EXf6y5OfCuNkmHTFvubeaG6rg450YKWLO95F5TYfRJdQ6/lkFjhPpsIe9q/QFLP3
+        ZOu+nE2ONCIlUKY7cpLOpYPs+RvYBMETYnSBYEBDAoGAI/ra+tkfv2SHFrPOMjiz
+        T6R6aHkDSTgNPbVtwf9vSsd4gmtXwiRIjs4nQuWxdNu3Teuzao7y2WtzJeH1ZkfF
+        9qxfD6awsH/EQU+nEbEp9kNXxTqTllmCVmSJ0n7wMV47qZG4T/Lanr7yK4hxphb6
+        dfZqbpIonitCPWGMKHufGN0CgYB8yCZuAZ4a01nQFTEaSiRNnzVkB326FvIp4vZ0
+        4ZxFZIDZ2VBRnoI2Gn45eqaAyIQUabX+FFxP7iYgmJ7ClkGwdZpN9BhA0bz2TnuG
+        zg0k05AdkWnAF1iv7BkmDIHfD9Vm8jT9AZByMhf3huiRr6nj7dYvwn9ljvjp5dgo
+        +tsA2wKBgF7pLURG7z1TAM3jKikqjs2UUgPBW+Fd9gpzpgVnujoQnC30/aZvUzUL
+        ZPICIuMYWuFGC/KCrq/X+pMqH6t9WmpX6SFW3TMjKrPOkqf5m7nJHTiHX+DmBfGr
+        bzgHWb/BDGyPxBbv34G6TdlZo64M3pQhz9Yr9DB1QQjkgJpVVds0
+        -----END RSA PRIVATE KEY-----
+  - path: /var/lib/jenkins/.ssh/id_rsa
+    permissions: 0400
+    owner: jenkins:jenkins
+    content: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEowIBAAKCAQEA47rZ0qSOqzLIspnMFvfwSYsms00nJkmsLHLem/9JsvqM2brk
+        0nfUDzr/6BbieH4HoC+GZMnhh21gX0C/nk/fYFLP+0fY2KbRObbCbdZGlOCguMcJ
+        QgcKz0sU9mms4+bPcmnil+j8ljP+KjrBDXiZtl6sYj0CnoD3MlVZfHmLI20xa0aO
+        CUvjLDsgTjVFhtRDdEHXcl4XHPJ5RKT9sEBlKbhCmI/6O1pNxEGEWvwwQE08+9Xl
+        9rJ08/nb/hIuzhTGJdEX/u7jwidxnYbzFyPdgs4jCHDAciqUorlgd/yw6Hs0z2IY
+        GxD9CPs6shx8aRmVLGMf+YnOUQHVD1Hi0FrBFwIDAQABAoIBAQDXekZ/DJu+G7hR
+        XjsBhKrFO7hrsdYYYV9bU3mVS7I1euNpZXD8QMvTeXUI6xZxAnc+t5lHpsoSNYkZ
+        uA9XwaXP46vNzQa+wOF55ZcFDNoOJpmNHS+CXV16FUYJfqZLomqpjM0OBjNyAFI/
+        LQbcMz/mkqAz+ByRU+ASrTWWFP91jSRSWAO/xmRcgqmh02TWlVJRROS3CsWz9C47
+        Ag1diZ4r2d1gFwnc6ZfSTNActLgUNU2NyDsFL4qHipWssGqoclfhsIdL1CLmhTix
+        t8tO0QBSw60H2XqQ0Y77MNfEYgdqvp6XRlB+Uw9Qjf3Y0ukA6ekD3BGfTcaNcq4b
+        4N1WUmTpAoGBAPYCzaWRcXHCJ/0WAUhggvy1kKbAdEtoJfkS3lva9pPgyRx+cTrW
+        98az6NhdD774O3F1GT8RemoX/9JpX0Z2HG3+f0r2vcSqhsyjJSJF6dEU3DMFte+G
+        A67iHnmmfelc1tZKrGuqfrGnFeMQgrmj3ugekKAoyeybPXkd7YTC9cidAoGBAOz6
+        Bbpmvrqr41TOgZCssFjteBNDvDU9NfHtpkgAx7HYkNp4xaWPwlBBydS6Ubsx5RQJ
+        EXf6y5OfCuNkmHTFvubeaG6rg450YKWLO95F5TYfRJdQ6/lkFjhPpsIe9q/QFLP3
+        ZOu+nE2ONCIlUKY7cpLOpYPs+RvYBMETYnSBYEBDAoGAI/ra+tkfv2SHFrPOMjiz
+        T6R6aHkDSTgNPbVtwf9vSsd4gmtXwiRIjs4nQuWxdNu3Teuzao7y2WtzJeH1ZkfF
+        9qxfD6awsH/EQU+nEbEp9kNXxTqTllmCVmSJ0n7wMV47qZG4T/Lanr7yK4hxphb6
+        dfZqbpIonitCPWGMKHufGN0CgYB8yCZuAZ4a01nQFTEaSiRNnzVkB326FvIp4vZ0
+        4ZxFZIDZ2VBRnoI2Gn45eqaAyIQUabX+FFxP7iYgmJ7ClkGwdZpN9BhA0bz2TnuG
+        zg0k05AdkWnAF1iv7BkmDIHfD9Vm8jT9AZByMhf3huiRr6nj7dYvwn9ljvjp5dgo
+        +tsA2wKBgF7pLURG7z1TAM3jKikqjs2UUgPBW+Fd9gpzpgVnujoQnC30/aZvUzUL
+        ZPICIuMYWuFGC/KCrq/X+pMqH6t9WmpX6SFW3TMjKrPOkqf5m7nJHTiHX+DmBfGr
+        bzgHWb/BDGyPxBbv34G6TdlZo64M3pQhz9Yr9DB1QQjkgJpVVds0
+        -----END RSA PRIVATE KEY-----
 
 runcmd:
  - /usr/sbin/sysctl -p
@@ -295,7 +360,7 @@ local-hostname: {{ hostname }}
                      'hostname_with_prefix':
                          definition['hostname_with_prefix'],
                      'uuid': str(uuid.uuid1()),
-                     'memory': 8,
+                     'memory': 8 * 1024 ** 2,
                      'ncpus': 1,
                      'cpus': [], 'disks': [], 'nics': []}
         self.disk_cpt = 0
@@ -345,6 +410,16 @@ local-hostname: {{ hostname }}
             'hostname': self.hostname,
             'nics': self.meta['nics']
         }
+        # NOTE(Gonéri): Add the unsecure key
+        meta['ssh_keys'].append(
+            'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDjutnSpI6rMsiym'
+            'cwW9/BJiyazTScmSawsct6b/0my+ozZuuTSd9QPOv/oFuJ4fgegL4Z'
+            'kyeGHbWBfQL+eT99gUs/7R9jYptE5tsJt1kaU4KC4xwlCBwrPSxT2a'
+            'azj5s9yaeKX6PyWM/4qOsENeJm2XqxiPQKegPcyVVl8eYsjbTFrRo4'
+            'JS+MsOyBONUWG1EN0QddyXhcc8nlEpP2wQGUpuEKYj/o7Wk3EQYRa/'
+            'DBATTz71eX2snTz+dv+Ei7OFMYl0Rf+7uPCJ3GdhvMXI92CziMIcMB'
+            'yKpSiuWB3/LDoezTPYhgbEP0I+zqyHHxpGZUsYx/5ic5RAdUPUeLQW'
+            'sEX unsecure')
         env = jinja2.Environment(undefined=jinja2.StrictUndefined)
         contents = {
             'user-data': env.from_string(Host.user_data_template_string),
