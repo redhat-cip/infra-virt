@@ -112,6 +112,12 @@ while true; do
         sleep 1
         echo -n .
         ssh $SSHOPTS jenkins@\$node uname > /dev/null 2>&1|| continue 2
+        # NOTE(Gonéri): on I.1.2.1, the ci.pem file is deployed through
+        # cloud-init. Since we can use our own cloud-init files, this file
+        # is not installed correctly.
+        if [ -f /etc/ssl/certs/ci.pem ]; then
+            scp $SSHOPTS /etc/ssl/certs/ci.pem root@\$node:/etc/ssl/certs/ci.pem || exit 1
+        fi
     done
     break
 done
