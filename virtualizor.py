@@ -259,6 +259,9 @@ write_files:
       IPADDR={{ nic.ip }}
       NETWORK={{ nic.network }}
       NETMASK={{ nic.netmask }}
+{% if nic.gateway is defined %}
+      GATEWAY={{ nic.gateway }}
+{% endif %}
 {% else %}
       BOOTPROTO=dhcp
 {% endif %}
