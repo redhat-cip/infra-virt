@@ -151,6 +151,10 @@ ssh $SSHOPTS root@$installserverip "
 
 kill ${tail_job}
 
+# Dump elasticsearch logs into ${LOG_DIR},
+# upload_logs will update the dump in swift.
+$ORIG/dumpelastic.py --url http://${installserverip}:9200 --output-dir ${LOG_DIR}
+
 upload_logs
 
 #ssh $SSHOPTS -A root@$installserverip configure.sh
