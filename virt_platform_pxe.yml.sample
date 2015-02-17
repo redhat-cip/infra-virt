@@ -8,7 +8,6 @@ hosts:
     nics:
     - mac: d8:9d:67:1a:8f:58
     - mac: d8:9d:67:1a:8f:59
-    profile: openstack-full
   os-ci-test11:
     disks:
     - size: 10Gi
@@ -18,7 +17,6 @@ hosts:
     nics:
     - mac: d8:9d:67:1a:41:7c
     - mac: d8:9d:67:1a:41:7d
-    profile: openstack-full
   os-ci-test12:
     disks:
     - size: 10Gi
@@ -28,7 +26,6 @@ hosts:
     nics:
     - mac: d8:9d:67:32:12:a4
     - mac: d8:9d:67:32:12:a5
-    profile: openstack-full
   os-ci-test4:
     disks:
     - size: 20Gi
@@ -38,7 +35,6 @@ hosts:
       name: eth0
       netmask: 255.255.255.0
       network: 10.151.68.0
-    profile: install-server
   router:
     disks:
     - size: 20Gi
@@ -48,4 +44,3 @@ hosts:
       name: eth0
       netmask: 255.255.255.0
       network: 196.168.68.0
-    profile: gateway

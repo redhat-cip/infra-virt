@@ -27,7 +27,6 @@ import tempfile
 import time
 import uuid
 
-import ipaddress
 import jinja2
 import libvirt
 import six
@@ -116,7 +115,7 @@ class Hypervisor(object):
                 return location
         return None
 
-    def create_networks(self, conf, install_server_info):
+    def create_networks(self, conf):
         existing_networks = ([n.name() for n in self.conn.listAllNetworks()])
         # Ensure the public_network is defined, we don't replace this network,
         # even if --replace is used because other VM may by connected to the
@@ -148,9 +147,9 @@ class Hypervisor(object):
         self.public_net = self.conn.networkLookupByName(
             conf.public_network)
 
-    def wait_for_lease(self, hypervisor, mac):
+    def wait_for_lease(self, mac):
         while True:
-            for lease in hypervisor.public_net.DHCPLeases():
+            for lease in self.public_net.DHCPLeases():
                 if lease['mac'] == mac:
                     return lease['ipaddr']
             time.sleep(1)
@@ -352,19 +351,20 @@ write_files:
 
 runcmd:
  - /usr/sbin/sysctl -p
- - /usr/sbin/iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+{% for nic in nics %}{% if nic.nat is defined %}
+ - /usr/sbin/iptables -t nat -A POSTROUTING -o {{ nic.name }} -j MASQUERADE
+{% endif %}{% endfor %}
  - /bin/rm -f /etc/yum.repos.d/*.repo
  - /usr/bin/systemctl restart network
 
 """
     meta_data_template_string = """
-instance-id: id-install-server
+instance-id: {{ hostname }}
 local-hostname: {{ hostname }}
 
 """
 
-    def __init__(self, hypervisor, conf, definition,
-                 install_server_info, gateway_info):
+    def __init__(self, hypervisor, conf, definition):
         self.hypervisor = hypervisor
         self.conf = conf
         self.hostname = definition['hostname']
@@ -381,26 +381,10 @@ local-hostname: {{ hostname }}
         self.disk_cpt = 0
 
         for k in ('uuid', 'serial', 'product_name',
-                  'memory', 'ncpus', 'is_install_server'):
+                  'memory', 'ncpus'):
             if k not in definition:
                 continue
             self.meta[k] = definition[k]
-
-        if definition['profile'] == 'install-server':
-            logging.info("  Configuring the install-server")
-            self.meta['is_install_server'] = True
-            definition['nics'].append({
-                'mac': install_server_info['mac'],
-                'network_name': conf.public_network
-            })
-
-        if definition['profile'] == 'gateway':
-            logging.info("  Configuring the Gateway")
-            self.meta['is_gateway'] = True
-            definition['nics'].append({
-                'mac': gateway_info['mac'],
-                'network_name': conf.public_network
-            })
 
         env = jinja2.Environment(undefined=jinja2.StrictUndefined)
         self.template = env.from_string(Host.host_template_string)
@@ -492,13 +476,10 @@ local-hostname: {{ hostname }}
         self.meta['disks'].append(disk)
 
     def register_nic(self, nic):
-        default = {
-            'mac': random_mac(),
-            'name': 'eth%i' % len(self.meta['nics']),
-            'network_name': '%s_sps' % self.conf.prefix
-        }
-        default.update(nic)
-        self.meta['nics'].append(default)
+        nic.setdefault('network_name', '%s_sps' % self.conf.prefix)
+        if nic['network_name'] == '__public_network__':
+            nic['network_name'] = self.conf.public_network
+        self.meta['nics'].append(nic)
 
     def dump_libvirt_xml(self):
         return self.template.render(self.meta)
@@ -548,35 +529,25 @@ class Network(object):
         return self.template.render(self.meta)
 
 
-def get_profile_info(hosts_definition, profile):
-    for hostname, definition in six.iteritems(hosts_definition['hosts']):
-        if definition.get('profile', '') == profile:
-            break
+def load_hosts_definition(input_file):
+    hosts_definition = yaml.load(open(input_file, 'r'))
 
-    logging.info("%s (%s)" % (profile, hostname))
-    admin_nic_info = definition['nics'][0]
-    network = ipaddress.ip_network(
-        unicode(
-            admin_nic_info['network'] + '/' + admin_nic_info['netmask']))
-    admin_nic_info = definition['nics'][0]
-    return {
-        'mac': admin_nic_info.get('mac', random_mac()),
-        'hostname': hostname,
-        'ip': admin_nic_info['ip'],
-        'gateway': str(network.network_address + 1),
-        'netmask': str(network.netmask),
-        'network': str(network.network_address),
-        'version': hosts_definition.get('version', 'RH7.0-I.1.2.1'),
-    }
+    for hostname, definition in six.iteritems(hosts_definition['hosts']):
+        i = 0
+        # Add the missing MAC because we use them later to know then the DHCP
+        # give the IP
+        for n in definition["nics"]:
+            n.setdefault('mac', random_mac())
+            n.setdefault('name', 'eth%d' % i)
+            i += 1
+    return(hosts_definition)
 
 
 def main(argv=sys.argv[1:]):
     conf = get_conf(argv)
-    hosts_definition = yaml.load(open(conf.input_file, 'r'))
+    hosts_definition = load_hosts_definition(conf.input_file)
     hypervisor = Hypervisor(conf)
-    install_server_info = get_profile_info(hosts_definition, "install-server")
-    gateway_info = get_profile_info(hosts_definition, "gateway")
-    hypervisor.create_networks(conf, install_server_info)
+    hypervisor.create_networks(conf)
 
     hosts = hosts_definition['hosts']
     existing_hosts = ([n.name() for n in hypervisor.conn.listAllDomains()])
@@ -595,8 +566,7 @@ def main(argv=sys.argv[1:]):
                 dom.undefine()
             exists = False
         if not exists:
-            host = Host(hypervisor, conf, definition,
-                        install_server_info, gateway_info)
+            host = Host(hypervisor, conf, definition)
             hypervisor.conn.defineXML(host.dump_libvirt_xml())
             dom = hypervisor.conn.lookupByName(hostname_with_prefix)
             dom.create()
@@ -604,19 +574,20 @@ def main(argv=sys.argv[1:]):
             logging.info("a host called %s is already defined, skipping "
                          "(see: --replace)." % hostname_with_prefix)
 
-    logging.info("Waiting for install-server DHCP query with MAC %s" %
-                 install_server_info['mac'])
-    ip = hypervisor.wait_for_lease(
-        hypervisor, install_server_info['mac'])
+    for hostname, definition in six.iteritems(hosts_definition['hosts']):
+        for n in definition['nics']:
+            try:
+                if n['network_name'] != conf.public_network:
+                    continue
+                if n['bootproto'] != 'dhcp':
+                    continue
+            except KeyError:
+                continue
 
-    logging.info("Install-server up and running with IP: %s" % ip)
-
-    logging.info("Waiting for Gateway DHCP query with MAC %s" %
-                 gateway_info['mac'])
-    ip = hypervisor.wait_for_lease(
-        hypervisor, gateway_info['mac'])
-
-    logging.info("Gateway up and running with IP: %s" % ip)
+            logging.info("Waiting for %s DHCP query with MAC %s" % (
+                hostname, n['mac']))
+            logging.info("Host %s has public IP: %s" % (
+                hostname, hypervisor.wait_for_lease(n['mac'])))
 
 
 if __name__ == '__main__':
