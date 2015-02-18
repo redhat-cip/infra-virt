@@ -56,7 +56,7 @@ def _get_indices(url):
     return indices
 
 
-def _dump_elasticsearch(url, output_dir, paging=1000):
+def _dump_elasticsearch(url, output_dir, paging=10000):
     """Dump elasticsearch database.
 
     :param url: url of elasticsearch rest api
@@ -72,6 +72,9 @@ def _dump_elasticsearch(url, output_dir, paging=1000):
 
     for indice in indices:
         offset = 0
+
+        if not os.path.exists("%s/%s" % (output_dir, indice)):
+            os.makedirs("%s/%s" % (output_dir, indice))
 
         while True:
             docs_url = "%s/%s/fluentd/_search?from=%s&size=%s&pretty" %\
