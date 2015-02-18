@@ -376,7 +376,7 @@ local-hostname: {{ hostname }}
                      'uuid': str(uuid.uuid1()),
                      'emulator': self.hypervisor.emulator,
                      'memory': 8 * 1024 ** 2,
-                     'ncpus': 1,
+                     'ncpus': 2,
                      'cpus': [], 'disks': [], 'nics': []}
         self.disk_cpt = 0
 
