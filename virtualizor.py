@@ -104,6 +104,17 @@ class Hypervisor(object):
         self.target_host = conf.target_host
         self.conn = libvirt.open('qemu+ssh://root@%s/system' %
                                  conf.target_host)
+        self.emulator = self.find_emulator()
+        if self.emulator is None:
+            logging.error("No emulator found")
+            exit(2)
+
+    def find_emulator(self):
+        for location in ('/usr/bin/qemu-system-x86_64',
+                         '/usr/libexec/qemu-kvm'):
+            if self.call('test', '-f', location) == 0:
+                return location
+        return None
 
     def create_networks(self, conf, install_server_info):
         existing_networks = ([n.name() for n in self.conn.listAllNetworks()])
@@ -149,8 +160,8 @@ class Hypervisor(object):
                          'root@%s' % self.target_host + ':' + dest])
 
     def call(self, *kargs):
-        subprocess.call(['ssh', 'root@%s' % self.target_host] +
-                        list(kargs))
+        return subprocess.call(['ssh', 'root@%s' % self.target_host] +
+                               list(kargs))
 
     class MissingPublicNetwork(Exception):
         pass
@@ -189,7 +200,7 @@ class Host(object):
   <on_reboot>restart</on_reboot>
   <on_crash>restart</on_crash>
   <devices>
-    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <emulator>{{ emulator }}</emulator>
 {% for disk in disks %}
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2'/>
@@ -356,10 +367,12 @@ local-hostname: {{ hostname }}
         self.conf = conf
         self.hostname = definition['hostname']
         self.hostname_with_prefix = definition['hostname_with_prefix']
+
         self.meta = {'hostname': definition['hostname'],
                      'hostname_with_prefix':
                          definition['hostname_with_prefix'],
                      'uuid': str(uuid.uuid1()),
+                     'emulator': self.hypervisor.emulator,
                      'memory': 8 * 1024 ** 2,
                      'ncpus': 1,
                      'cpus': [], 'disks': [], 'nics': []}
