@@ -67,20 +67,22 @@ class TestVirtualizor(testtools.TestCase):
                          '^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$')
 
     @mock.patch('virtualizor.subprocess.call')
-    def test_main(self, sub_call):
+    @mock.patch('virtualizor.Hypervisor.call', return_value=0)
+    def test_main(self, sub_call, hyp_call):
         self.virtualizor.main(['virt_platform_qcow2.yml.sample', 'bar',
                                '--pub-key-file',
                                'virt_platform_qcow2.yml.sample'])
-        self.assertEqual(sub_call.call_count, 46)
+        self.assertEqual(sub_call.call_count, 39)
         self.assertEqual(libvirt_conn.networkCreateXML.call_count, 1)
         self.assertEqual(libvirt_conn.defineXML.call_count, 4)
 
     @mock.patch('virtualizor.subprocess.call')
-    def test_main_with_replace(self, sub_call):
+    @mock.patch('virtualizor.Hypervisor.call', return_value=0)
+    def test_main_with_replace(self, sub_call, hyp_call):
         self.virtualizor.main(['--replace', 'virt_platform_qcow2.yml.sample',
                                'bar', '--pub-key-file',
                                'virt_platform_qcow2.yml.sample'])
-        self.assertEqual(sub_call.call_count, 59)
+        self.assertEqual(sub_call.call_count, 50)
         self.assertEqual(libvirt_conn.networkCreateXML.call_count, 2)
         self.assertEqual(libvirt_conn.defineXML.call_count, 5)
 
