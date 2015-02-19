@@ -74,7 +74,7 @@ mac=$(ssh root@$virthost cat /etc/libvirt/qemu/${PREFIX}_os-ci-test4.xml|xmllint
 installserverip=$(ssh $SSHOPTS root@$virthost "awk '/ ${mac} / {print \$3}' /var/lib/libvirt/dnsmasq/nat.leases"|head -n 1)
 
 retry=0
-while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner top/ root@$installserverip:/; do
+while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner ${ctdir}/top/ root@$installserverip:/; do
     if [ $((retry++)) -gt 300 ]; then
         echo "reached max retries"
 	exit 1
