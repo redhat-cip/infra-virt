@@ -69,7 +69,7 @@ else
 fi
 
 
-$ORIG/virtualizor.py "$platform" $virthost --replace --prefix ${PREFIX} --public_network nat --replace --pub-key-file $pubfile
+$ORIG/virtualizor.py "$platform" $virthost --prefix ${PREFIX} --public_network nat --replace --pub-key-file $pubfile
 mac=$(ssh root@$virthost cat /etc/libvirt/qemu/${PREFIX}_os-ci-test4.xml|xmllint --xpath 'string(/domain/devices/interface[last()]/mac/@address)' -)
 installserverip=$(ssh $SSHOPTS root@$virthost "awk '/ ${mac} / {print \$3}' /var/lib/libvirt/dnsmasq/nat.leases"|head -n 1)
 
