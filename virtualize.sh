@@ -21,16 +21,45 @@ set -x
 
 ORIG=$(cd $(dirname $0); pwd)
 PREFIX=$USER
+installserverip=""
+usage () {
+      echo "./bob.bash [OPTION] workdir1 workdir2 etc"
+      echo " OPTION:"
+      echo "  -H|--hypervisor=name: change the hypervisor name, default (${hypervisor})"
+      exit 1
+}
 
-if [ $# != 2 ]; then
-    echo "Usage: $0 <config-tools dir> <libvirt host>"
-    echo
-    echo "ex: $0 /home/config-tools 192.168.100.12"
+ARGS=$(getopt -o H:h -l "hypervisor:,help" -- "$@");
+#Bad arguments
+if [ $? -ne 0 ]; then
+    usage
     exit 1
 fi
 
-ctdir=$1
-virthost=$2
+eval set -- "$ARGS";
+virthost="localhost"
+while true; do
+  case "$1" in
+    -h|--help)
+      usage
+      ;;
+    -H|--hypervisor)
+      shift;
+      if [ -n "$1" ]; then
+        virthost=$1
+        shift;
+      fi
+      ;;
+    *)
+      shift;
+      break;
+      ;;
+  esac
+done
+echo $hypervisor $*
+
+
+#virthost=$2
 platform=virt_platform.yml
 
 [ -f ~/virtualizerc ] && source ~/virtualizerc
@@ -41,6 +70,13 @@ TIMEOUT_ITERATION=${TIMEOUT_ITERATION:-"150"}
 LOG_DIR=${LOG_DIR:-"$(pwd)/logs"}
 
 SSHOPTS="-oBatchMode=yes -oCheckHostIP=no -oHashKnownHosts=no  -oStrictHostKeyChecking=no -oPreferredAuthentications=publickey  -oChallengeResponseAuthentication=no -oKbdInteractiveDevices=no -oUserKnownHostsFile=/dev/null -oControlPath=~/.ssh/control-%r@%h:%p -oControlMaster=auto -oControlPersist=30"
+
+if [ -n "$SSH_AUTH_SOCK" ]; then
+    ssh-add -L > pubfile
+    pubfile=pubfile
+else
+    pubfile=~/.ssh/id_rsa.pub
+fi
 
 upload_logs() {
     [ -f ~/openrc ] || return
@@ -61,94 +97,116 @@ upload_logs() {
     swift post -m 'web-listings: true' ${CONTAINER}
 }
 
-if [ -n "$SSH_AUTH_SOCK" ]; then
-    ssh-add -L > pubfile
-    pubfile=pubfile
-else
-    pubfile=~/.ssh/id_rsa.pub
-fi
+deploy() {
+    local ctdir=$1
+    local do_upgrade=$2
 
-
-$ORIG/virtualizor.py "$platform" $virthost --prefix ${PREFIX} --public_network nat --replace --pub-key-file $pubfile
-mac=$(ssh root@$virthost cat /etc/libvirt/qemu/${PREFIX}_os-ci-test4.xml|xmllint --xpath 'string(/domain/devices/interface[last()]/mac/@address)' -)
-installserverip=$(ssh $SSHOPTS root@$virthost "awk '/ ${mac} / {print \$3}' /var/lib/libvirt/dnsmasq/nat.leases"|head -n 1)
-
-retry=0
-while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner ${ctdir}/top/ root@$installserverip:/; do
-    if [ $((retry++)) -gt 300 ]; then
-        echo "reached max retries"
-	exit 1
+    if [ ${do_upgrade} = 1 ]; then
+       # TODO(Gonéri): we need a better way to identify the install-server
+        ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_os-ci-test4
+        for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name goneri_os-ci-test4); do
+             ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_os-ci-test4 ${snapshot}
+        done
+        ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${PREFIX}_os-ci-test4
+        jenkins_job_name="upgrade"
     else
-        echo "install-server ($installserverip) not ready yet. waiting..."
+#        virtualizor_extra_args="--replace"
+        jenkins_job_name="puppet"
     fi
-    sleep 10
-    echo -n .
-done
 
-set -eux
-scp $SSHOPTS ${ctdir}/extract-archive.sh ${ctdir}/functions root@$installserverip:/tmp
+    $ORIG/virtualizor.py "$workdir/$platform" $virthost --prefix ${PREFIX} --public_network nat --pub-key-file $pubfile ${virtualizor_extra_args}
+    local mac=$(ssh $SSHOPTS root@$virthost cat /etc/libvirt/qemu/${PREFIX}_os-ci-test4.xml|xmllint --xpath 'string(/domain/devices/interface[last()]/mac/@address)' -)
+    installserverip=$(ssh $SSHOPTS root@$virthost "awk '/ ${mac} / {print \$3}' /var/lib/libvirt/dnsmasq/nat.leases"|head -n 1)
 
-ssh $SSHOPTS root@$installserverip "
-[ -d /var/lib/edeploy ] && echo -e 'RSERV=localhost\nRSERV_PORT=873' >> /var/lib/edeploy/conf"
-
-ssh $SSHOPTS root@$installserverip /tmp/extract-archive.sh
-ssh $SSHOPTS root@$installserverip rm /tmp/extract-archive.sh /tmp/functions
-ssh $SSHOPTS root@$installserverip "ssh-keygen -y -f ~jenkins/.ssh/id_rsa >> ~jenkins/.ssh/authorized_keys"
-ssh $SSHOPTS root@$installserverip service dnsmasq restart
-ssh $SSHOPTS root@$installserverip service httpd restart
-ssh $SSHOPTS root@$installserverip service rsyncd restart
-
-
-ssh $SSHOPTS root@$installserverip "
-. /etc/config-tools/config
-retry=0
-while true; do
-    if [  \$retry -gt $TIMEOUT_ITERATION ]; then
-        echo 'Timeout'
-        exit 1
-    fi
-    ((retry++))
-    for node in \$HOSTS; do
-        sleep 1
-        echo -n .
-        ssh $SSHOPTS jenkins@\$node uname > /dev/null 2>&1|| continue 2
-        # NOTE(Gonéri): on I.1.2.1, the ci.pem file is deployed through
-        # cloud-init. Since we can use our own cloud-init files, this file
-        # is not installed correctly.
-        if [ -f /etc/ssl/certs/ci.pem ]; then
-            scp $SSHOPTS /etc/ssl/certs/ci.pem root@\$node:/etc/ssl/certs/ci.pem || exit 1
+    local retry=0
+    while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner ${ctdir}/top/ root@$installserverip:/; do
+        if [ $((retry++)) -gt 300 ]; then
+            echo "reached max retries"
+    	exit 1
+        else
+            echo "install-server ($installserverip) not ready yet. waiting..."
         fi
+        sleep 10
+        echo -n .
     done
-    break
-done
-"
 
+    set -eux
+    scp $SSHOPTS ${ctdir}/extract-archive.sh ${ctdir}/functions root@$installserverip:/tmp
 
-
-while curl --silent http://$installserverip:8282/job/puppet/build|\
-        grep "Your browser will reload automatically when Jenkins is read"; do
-    sleep 1;
-done
-
-
-jenkins_log_file="/var/lib/jenkins/jobs/puppet/builds/1/log"
-(
     ssh $SSHOPTS root@$installserverip "
-while true; do
-    [ -f $jenkins_log_file ] && tail -f $jenkins_log_file
-    sleep 1
-done"
-) &
-tail_job=$!
+    [ -d /var/lib/edeploy ] && echo -e 'RSERV=localhost\nRSERV_PORT=873' >> /var/lib/edeploy/conf"
 
-# Wait for the first job to finish
-ssh $SSHOPTS root@$installserverip "
+    ssh $SSHOPTS root@$installserverip /tmp/extract-archive.sh
+    ssh $SSHOPTS root@$installserverip rm /tmp/extract-archive.sh /tmp/functions
+    ssh $SSHOPTS root@$installserverip "ssh-keygen -y -f ~jenkins/.ssh/id_rsa >> ~jenkins/.ssh/authorized_keys"
+    ssh $SSHOPTS root@$installserverip service dnsmasq restart
+    ssh $SSHOPTS root@$installserverip service httpd restart
+    ssh $SSHOPTS root@$installserverip service rsyncd restart
+
+    # TODO(Gonéri): We use the hypervisor as a mirror/proxy
+    ssh $SSHOPTS root@$installserverip "echo 10.143.114.133 os-ci-edeploy.ring.enovance.com >> /etc/hosts"
+
+
+    ssh $SSHOPTS root@$installserverip "
+    . /etc/config-tools/config
+    retry=0
     while true; do
-        test -f /var/lib/jenkins/jobs/puppet/builds/1/build.xml && break;
-        sleep 1;
-    done"
+        if [  \$retry -gt $TIMEOUT_ITERATION ]; then
+            echo 'Timeout'
+            exit 1
+        fi
+        ((retry++))
+        for node in \$HOSTS; do
+            sleep 1
+            echo -n .
+            ssh $SSHOPTS jenkins@\$node uname > /dev/null 2>&1|| continue 2
+            # NOTE(Gonéri): on I.1.2.1, the ci.pem file is deployed through
+            # cloud-init. Since we can use our own cloud-init files, this file
+            # is not installed correctly.
+            if [ -f /etc/ssl/certs/ci.pem ]; then
+                scp $SSHOPTS /etc/ssl/certs/ci.pem root@\$node:/etc/ssl/certs/ci.pem || exit 1
+            fi
+            # TODO(Gonéri): Something we need for the upgrade, we will need a
+            # better way to identify the install-server.
+            ssh $SSHOPTS root@\$node \"echo 'RSERV=os-ci-test4' >> /var/lib/edeploy/conf\"
+            ssh $SSHOPTS root@\$node \"echo 'RSERV_PORT=873' >> /var/lib/edeploy/conf\"
+        done
+        break
+    done
+    "
 
-kill ${tail_job}
+
+    while curl --silent http://$installserverip:8282/job/${jenkins_job_name}/build|\
+            grep "Your browser will reload automatically when Jenkins is read"; do
+        sleep 1;
+    done
+
+
+    jenkins_log_file="/var/lib/jenkins/jobs/${jenkins_job_name}/builds/1/log"
+    (
+        ssh $SSHOPTS root@$installserverip "
+    while true; do
+        [ -f $jenkins_log_file ] && tail -n 1000 -f $jenkins_log_file
+        sleep 1
+    done"
+    ) &
+    tail_job=$!
+
+    # Wait for the first job to finish
+    ssh $SSHOPTS root@$installserverip "
+        while true; do
+            test -f /var/lib/jenkins/jobs/${jenkins_job_name}/builds/1/build.xml && break;
+            sleep 1;
+        done"
+
+    kill ${tail_job}
+}
+
+do_upgrade=0
+for workdir in $*; do
+    deploy ${workdir} ${do_upgrade}
+    do_upgrade=1
+done
 
 # Dump elasticsearch logs into ${LOG_DIR},
 # upload_logs will update the dump in swift.
