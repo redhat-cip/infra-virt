@@ -170,6 +170,8 @@ deploy() {
             # better way to identify the install-server.
             ssh $SSHOPTS root@\$node \"echo 'RSERV=os-ci-test4' >> /var/lib/edeploy/conf\"
             ssh $SSHOPTS root@\$node \"echo 'RSERV_PORT=873' >> /var/lib/edeploy/conf\"
+            ssh $SSHOPTS root@\$node \"echo 'Defaults:jenkins !requiretty' > /etc/sudoers.d/999-jenkins-cloud-init-requiretty\"
+            ssh $SSHOPTS root@\$node \"echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/999-jenkins-cloud-init-requiretty\"
         done
         break
     done
