@@ -21,6 +21,7 @@ set -x
 
 ORIG=$(cd $(dirname $0); pwd)
 PREFIX=$USER
+installserver_name="os-ci-test4"
 installserverip=""
 usage () {
       echo "./bob.bash [OPTION] workdir1 workdir2 etc"
@@ -102,13 +103,13 @@ deploy() {
     local do_upgrade=$2
 
     if [ ${do_upgrade} = 1 ]; then
-        if $(ssh $SSHOPTS root@$virthost virsh desc ${PREFIX}_os-ci-test4 >/dev/null 2>&1); then
+        if $(ssh $SSHOPTS root@$virthost virsh desc ${PREFIX}_${installserver_name} >/dev/null 2>&1); then
             # TODO(Gonéri): we need a better way to identify the install-server
-            ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_os-ci-test4
-            for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name goneri_os-ci-test4); do
-                 ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_os-ci-test4 ${snapshot}
+            ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_${installserver_name}
+            for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name goneri_${installserver_name}); do
+                 ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_${installserver_name} ${snapshot}
             done
-            ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${PREFIX}_os-ci-test4
+            ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${PREFIX}_${installserver_name}
             jenkins_job_name="upgrade"
         fi
     else
@@ -117,7 +118,7 @@ deploy() {
     fi
 
     $ORIG/virtualizor.py "$workdir/$platform" $virthost --prefix ${PREFIX} --public_network nat --pub-key-file $pubfile ${virtualizor_extra_args}
-    local mac=$(ssh $SSHOPTS root@$virthost cat /etc/libvirt/qemu/${PREFIX}_os-ci-test4.xml|xmllint --xpath 'string(/domain/devices/interface[last()]/mac/@address)' -)
+    local mac=$(ssh $SSHOPTS root@$virthost cat /etc/libvirt/qemu/${PREFIX}_${installserver_name}.xml|xmllint --xpath 'string(/domain/devices/interface[last()]/mac/@address)' -)
     installserverip=$(ssh $SSHOPTS root@$virthost "awk '/ ${mac} / {print \$3}' /var/lib/libvirt/dnsmasq/nat.leases"|head -n 1)
 
     local retry=0
@@ -170,7 +171,7 @@ deploy() {
             fi
             # TODO(Gonéri): Something we need for the upgrade, we will need a
             # better way to identify the install-server.
-            ssh $SSHOPTS root@\$node \"echo 'RSERV=os-ci-test4' >> /var/lib/edeploy/conf\"
+            ssh $SSHOPTS root@\$node \"echo 'RSERV=${installserver_name}' >> /var/lib/edeploy/conf\"
             ssh $SSHOPTS root@\$node \"echo 'RSERV_PORT=873' >> /var/lib/edeploy/conf\"
             ssh $SSHOPTS root@\$node \"echo 'Defaults:jenkins !requiretty' > /etc/sudoers.d/999-jenkins-cloud-init-requiretty\"
             ssh $SSHOPTS root@\$node \"echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/999-jenkins-cloud-init-requiretty\"
