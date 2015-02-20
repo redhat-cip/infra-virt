@@ -102,13 +102,15 @@ deploy() {
     local do_upgrade=$2
 
     if [ ${do_upgrade} = 1 ]; then
-       # TODO(Gonéri): we need a better way to identify the install-server
-        ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_os-ci-test4
-        for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name goneri_os-ci-test4); do
-             ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_os-ci-test4 ${snapshot}
-        done
-        ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${PREFIX}_os-ci-test4
-        jenkins_job_name="upgrade"
+        if $(ssh $SSHOPTS root@$virthost virsh desc ${PREFIX}_os-ci-test4 >/dev/null 2>&1); then
+            # TODO(Gonéri): we need a better way to identify the install-server
+            ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_os-ci-test4
+            for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name goneri_os-ci-test4); do
+                 ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_os-ci-test4 ${snapshot}
+            done
+            ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${PREFIX}_os-ci-test4
+            jenkins_job_name="upgrade"
+        fi
     else
 #        virtualizor_extra_args="--replace"
         jenkins_job_name="puppet"
