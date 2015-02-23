@@ -122,13 +122,6 @@ $ cd ~/virt-infra/
 $ ./virtualizor.py virt_platform.yml my-hypervisor-node --replace --pub-key-file ~/.ssh/boa.pub
 ```
 
-or
-
-```sh
-$ cd ~/virt-infra/
-$ ./virtualise.sh ~/config-tools/ ~/config-tools/env/deployment-3nodes-D7.yml my-hypervisor-node
-```
-
 ### virtualize.sh
 
 `virtualize.sh` is a script built on top of `virtualizor.py` to play SpinalStack deployment and upgrade.
