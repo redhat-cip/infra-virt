@@ -128,3 +128,24 @@ or
 $ cd ~/virt-infra/
 $ ./virtualise.sh ~/config-tools/ ~/config-tools/env/deployment-3nodes-D7.yml my-hypervisor-node
 ```
+
+### virtualize.sh
+
+`virtualize.sh` is a script built on top of `virtualizor.py` to play SpinalStack deployment and upgrade.
+
+```sh
+$ ./virtualize.sh --help
+usage: virtualize.sh [OPTION] workdir1 workdir2 etc
+Collect architecture information from the edeploy directory as generated
+by config-tools/download.sh.
+
+optinal arguments:
+  -H|--hypervisor=name: change the hypervisor name, default ()
+arguments:
+virtualize.sh will use the first argument as the location of the
+SpinalStack environment to deploy. It will then upgrade the newly deployed
+SpinalStack to the following environment directory.
+
+For example: ./virtualize.sh I.1.2.1 I.1.3.0 I.1.3.1
+will deploy environment I.1.2.1 and upgrade to I.1.3.0 and then I.1.3.1.
+```
