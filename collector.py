@@ -100,7 +100,7 @@ def collect(config_path, qcow, sps_version):
         if qcow or \
            global_conf["hosts"][hostname]["profile"] == "install-server":
             if 'disks' not in virt_platform["hosts"][hostname]:
-                virt_platform["hosts"][hostname]["disks"] = [{'size': '15Gi'}]
+                virt_platform["hosts"][hostname]["disks"] = [{'size': '40Gi'}]
             virt_platform["hosts"][hostname]["disks"][0]['image'] = img
 
         # add the profile
