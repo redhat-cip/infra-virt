@@ -93,6 +93,16 @@ get_mac() {
     echo ${mac}
 }
 
+drop_host() {
+    local host=$1
+
+    ssh $SSHOPTS root@$virthost virsh destroy ${host}
+    for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name ${host}); do
+        ssh $SSHOPTS root@$virthost virsh snapshot-delete ${host} ${snapshot}
+    done
+    ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${host}
+}
+
 deploy() {
     local ctdir=$1
     shift
@@ -101,15 +111,10 @@ deploy() {
     local extra_args=$*
 
     if [ ${do_upgrade} = 1 ]; then
-        if $(ssh ${SSHOPTS} root@${virthost} virsh desc ${PREFIX}_${installserver_name} >/dev/null 2>&1); then
-            # TODO(Gonéri): we need a better way to identify the install-server
-            ssh $SSHOPTS root@${virthost} virsh destroy ${PREFIX}_${installserver_name}
-            for snapshot in $(ssh $SSHOPTS root@${virthost} virsh snapshot-list --name goneri_${installserver_name}); do
-                ssh $SSHOPTS root@${virthost} virsh snapshot-delete ${PREFIX}_${installserver_name} ${snapshot}
-            done
-            ssh $SSHOPTS root@${virthost} virsh undefine --remove-all-storage ${PREFIX}_${installserver_name}
-            jenkins_job_name="upgrade"
-        fi
+        # On upgrade, we redeploy the install-server and the router.
+        drop_host ${PREFIX}_${installserver_name}
+        drop_host ${PREFIX}_router
+        jenkins_job_name="upgrade"
     else
         jenkins_job_name="puppet"
     fi
