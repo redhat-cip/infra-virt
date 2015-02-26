@@ -20,14 +20,21 @@ import unittest
 
 import collector
 
+import mock
+
 _MODULE_DIR = os.path.dirname(__file__)
 _CONFIG_PATH = "%s/data" % _MODULE_DIR
 
 
 class TestCollector(unittest.TestCase):
 
-    def test_collect(self):
-        virt_platform = collector.collect(_CONFIG_PATH, False, "sps_version")
+    @mock.patch("collector.requests")
+    def test_collect(self, m_requests):
+        m_checksum = mock.Mock()
+        m_requests.get.return_value = m_checksum
+        m_checksum.text = "test_checksum test_image"
+        virt_platform = collector.collect(_CONFIG_PATH, False, "sps_version",
+                                          "image_url")
         self.assertTrue("hosts" in virt_platform)
         self.assertEqual(len(virt_platform["hosts"]), 5)
 
@@ -35,6 +42,9 @@ class TestCollector(unittest.TestCase):
             self.assertTrue("disks" in virt_platform["hosts"][host])
             self.assertEqual(virt_platform["hosts"][host]["nics"][0]['mac'],
                              'dddd')
+
+        self.assertIn("router", virt_platform["hosts"])
+        self.assertIn("images-url", virt_platform)
 
 if __name__ == "__main__":
     unittest.main()

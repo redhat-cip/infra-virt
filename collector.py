@@ -19,12 +19,13 @@ from hardware import cmdb
 from hardware import generate
 from hardware import state
 
+import argparse
 import glob
 import netaddr
 import os
 import sys
 
-import argparse
+import requests
 import yaml
 
 _VERSION = "0.0.1"
@@ -62,12 +63,33 @@ def _get_router_nic(config_path):
                         "network": str(net)}
 
 
-def collect(config_path, qcow, sps_version):
+def _get_checksum(images_url, sps_version, img):
+
+    if not images_url:
+        return None
+
+    try:
+        img_checksum = img.replace("qcow2", "md5")
+        url = "%s/%s/%s" % (images_url, sps_version, img_checksum)
+        resp = requests.get(url)
+    except requests.exceptions.MissingSchema as e:
+        print("Invalid url '%s': %s" % (url, e))
+        sys.exit(1)
+    except requests.exceptions.ConnectionError as e:
+        print("Unreachable url '%s': %s" % (url, e))
+        print("The infra description will not contain the images checksums.")
+        return None
+
+    return resp.text.split(" ")[0].encode("utf8")
+
+
+def collect(config_path, qcow, sps_version, images_url):
     # check config directory path
     if not os.path.exists(config_path):
         print("Error: --config-dir='%s' does not exist." % config_path)
         sys.exit(1)
 
+    images_checksums = {}
     # get state object
     state_obj = state.State()
     state_obj.load(os.path.join(config_path, 'edeploy') + '/')
@@ -85,6 +107,10 @@ def collect(config_path, qcow, sps_version):
     img = "%s-%s.img.qcow2" % ("install-server", sps_version)
     virt_platform["hosts"]["router"]["disks"] = [{'size': '15Gi',
                                                   'image': img}]
+    # adds image checksum
+    checksum = _get_checksum(images_url, sps_version, img)
+    images_checksums[img] = checksum
+    virt_platform["hosts"]["router"]["disks"][0]['checksum'] = checksum
 
     virt_platform["hosts"]["router"]["nics"] = [_get_router_nic(config_path)]
     virt_platform["hosts"]["router"]["nics"].append(dict(INT_DHCP))
@@ -97,11 +123,18 @@ def collect(config_path, qcow, sps_version):
         virt_platform["hosts"][hostname] = state_obj.hardware_info(hostname)
         img = "%s-%s.img.qcow2" % (global_conf["hosts"][hostname]["profile"],
                                    sps_version)
+
+        if img not in images_checksums:
+            checksum = _get_checksum(images_url, sps_version, img)
+            images_checksums[img] = checksum
+
         if qcow or \
            global_conf["hosts"][hostname]["profile"] == "install-server":
             if 'disks' not in virt_platform["hosts"][hostname]:
                 virt_platform["hosts"][hostname]["disks"] = [{'size': '40Gi'}]
             virt_platform["hosts"][hostname]["disks"][0]['image'] = img
+            virt_platform["hosts"][hostname]["disks"][0]['checksum'] = \
+                images_checksums.get(img)
 
         # add the profile
         virt_platform["hosts"][hostname]["profile"] = \
@@ -127,6 +160,9 @@ def collect(config_path, qcow, sps_version):
         if global_conf["hosts"][hostname]["profile"] == "install-server":
             nics.append(dict(INT_DHCP))
         virt_platform["hosts"][hostname]["nics"] = nics
+
+    if images_url:
+        virt_platform["images-url"] = images_url
 
     return virt_platform
 
@@ -163,11 +199,16 @@ def main():
                             default=False,
                             action="store_true",
                             help='Boot on qcow image.')
+    cli_parser.add_argument('--images-url',
+                            required=False,
+                            help='Url of the qcow images.')
 
     cli_arguments = cli_parser.parse_args()
 
     virt_platform = collect(cli_arguments.config_dir, cli_arguments.qcow,
-                            cli_arguments.sps_version)
+                            cli_arguments.sps_version,
+                            cli_arguments.images_url)
+
     save_virt_platform(virt_platform,
                        cli_arguments.output_dir)
 
