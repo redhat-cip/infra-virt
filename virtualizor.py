@@ -15,6 +15,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from templates import host as host_template
+from templates import network as network_template
+
 import argparse
 import logging
 import random
@@ -41,7 +44,7 @@ def random_mac():
         random.randint(0, 255))
 
 
-def canical_size(size):
+def canonical_size(size):
     """Convert size to GB or MB
 
     Convert GiB to MB or return the original string.
@@ -165,202 +168,6 @@ class Hypervisor(object):
 
 
 class Host(object):
-    host_template_string = """
-<domain type='kvm'>
-  <name>{{ hostname_with_prefix }}</name>
-  <uuid>{{ uuid }}</uuid>
-  <memory unit='KiB'>{{ memory }}</memory>
-  <currentmemory unit='KiB'>{{ memory }}</currentmemory>
-  <vcpu>{{ ncpus }}</vcpu>
-  <cpu mode='host-passthrough'>
-  </cpu>
-  <os>
-    <smbios mode='sysinfo'/>
-    <type arch='x86_64' machine='pc'>hvm</type>
-    <bios useserial='yes' rebootTimeout='5000'/>
-  </os>
-  <sysinfo type='smbios'>
-    <bios>
-      <entry name='vendor'>eNovance</entry>
-    </bios>
-    <system>
-      <entry name='manufacturer'>QEMU</entry>
-      <entry name='product'>virtualizor</entry>
-      <entry name='version'>1.0</entry>
-    </system>
-  </sysinfo>
-  <features>
-    <acpi/>
-    <apic/>
-    <pae/>
-  </features>
-  <clock offset='utc'/>
-  <on_poweroff>restart</on_poweroff>
-  <on_reboot>restart</on_reboot>
-  <on_crash>restart</on_crash>
-  <devices>
-    <emulator>{{ emulator }}</emulator>
-{% for disk in disks %}
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
-      <source file='{{ disk.path }}'/>
-      <target dev='{{ disk.name }}' bus='virtio'/>
-{% if disk.boot_order is defined %}
-      <boot order='{{ disk.boot_order }}'/>
-{% endif %}
-    </disk>
-{% endfor %}
-{% for nic in nics %}
-{% if nic.network_name is defined %}
-    <interface type='network'>
-      <mac address='{{ nic.mac }}'/>
-      <source network='{{ nic.network_name }}'/>
-      <model type='virtio'/>
-{% if nic.boot_order is defined %}
-      <boot order='{{ nic.boot_order }}'/>
-{% endif %}
-    </interface>
-{% endif %}
-{% endfor %}
-    <serial type='pty'>
-      <target port='0'/>
-    </serial>
-    <console type='pty'>
-      <target type='serial' port='0'/>
-    </console>
-    <input type='mouse' bus='ps2'/>
-    <graphics type='vnc' port='-1' autoport='yes'/>
-    <video>
-      <model type='cirrus' vram='9216' heads='1'/>
-    </video>
-  </devices>
-</domain>
-    """
-    host_libvirt_image_dir = "/var/lib/libvirt/images"
-    user_data_template_string = """#cloud-config
-users:
- - default
- - name: jenkins
-   ssh-authorized-keys:
-{% for ssh_key in ssh_keys %}   - {{ ssh_key|trim }}
-{% endfor %}
- - name: root
-   ssh-authorized-keys:
-{% for ssh_key in ssh_keys %}   - {{ ssh_key|trim }}
-{% endfor %}
-
-write_files:
-  - path: /etc/resolv.conf
-    content: |
-      nameserver 8.8.8.8
-      options rotate timeout:1
-  - path: /etc/sudoers.d/jenkins-cloud-init
-    permissions: 0440
-    content: |
-      Defaults:jenkins !requiretty
-      jenkins ALL=(ALL) NOPASSWD:ALL
-{% for nic in nics %}
-  - path: /etc/sysconfig/network-scripts/ifcfg-{{ nic.name }}
-    content: |
-      DEVICE={{ nic.name }}
-      ONBOOT=yes
-{% if nic.ip is defined %}
-      BOOTPROTO=none
-      IPADDR={{ nic.ip }}
-      NETWORK={{ nic.network }}
-      NETMASK={{ nic.netmask }}
-{% if nic.gateway is defined %}
-      GATEWAY={{ nic.gateway }}
-{% endif %}
-{% else %}
-      BOOTPROTO=dhcp
-{% endif %}
-{% endfor %}
-  - path: /etc/sysconfig/network
-    content: |
-      NETWORKING=yes
-      NOZEROCONF=no
-      HOSTNAME={{ hostname }}
-  - path: /etc/sysctl.conf
-    content: |
-      net.ipv4.ip_forward = 1
-  - path: /root/.ssh/id_rsa
-    permissions: 0400
-    owner: root:root
-    content: |
-        -----BEGIN RSA PRIVATE KEY-----
-        MIIEowIBAAKCAQEA47rZ0qSOqzLIspnMFvfwSYsms00nJkmsLHLem/9JsvqM2brk
-        0nfUDzr/6BbieH4HoC+GZMnhh21gX0C/nk/fYFLP+0fY2KbRObbCbdZGlOCguMcJ
-        QgcKz0sU9mms4+bPcmnil+j8ljP+KjrBDXiZtl6sYj0CnoD3MlVZfHmLI20xa0aO
-        CUvjLDsgTjVFhtRDdEHXcl4XHPJ5RKT9sEBlKbhCmI/6O1pNxEGEWvwwQE08+9Xl
-        9rJ08/nb/hIuzhTGJdEX/u7jwidxnYbzFyPdgs4jCHDAciqUorlgd/yw6Hs0z2IY
-        GxD9CPs6shx8aRmVLGMf+YnOUQHVD1Hi0FrBFwIDAQABAoIBAQDXekZ/DJu+G7hR
-        XjsBhKrFO7hrsdYYYV9bU3mVS7I1euNpZXD8QMvTeXUI6xZxAnc+t5lHpsoSNYkZ
-        uA9XwaXP46vNzQa+wOF55ZcFDNoOJpmNHS+CXV16FUYJfqZLomqpjM0OBjNyAFI/
-        LQbcMz/mkqAz+ByRU+ASrTWWFP91jSRSWAO/xmRcgqmh02TWlVJRROS3CsWz9C47
-        Ag1diZ4r2d1gFwnc6ZfSTNActLgUNU2NyDsFL4qHipWssGqoclfhsIdL1CLmhTix
-        t8tO0QBSw60H2XqQ0Y77MNfEYgdqvp6XRlB+Uw9Qjf3Y0ukA6ekD3BGfTcaNcq4b
-        4N1WUmTpAoGBAPYCzaWRcXHCJ/0WAUhggvy1kKbAdEtoJfkS3lva9pPgyRx+cTrW
-        98az6NhdD774O3F1GT8RemoX/9JpX0Z2HG3+f0r2vcSqhsyjJSJF6dEU3DMFte+G
-        A67iHnmmfelc1tZKrGuqfrGnFeMQgrmj3ugekKAoyeybPXkd7YTC9cidAoGBAOz6
-        Bbpmvrqr41TOgZCssFjteBNDvDU9NfHtpkgAx7HYkNp4xaWPwlBBydS6Ubsx5RQJ
-        EXf6y5OfCuNkmHTFvubeaG6rg450YKWLO95F5TYfRJdQ6/lkFjhPpsIe9q/QFLP3
-        ZOu+nE2ONCIlUKY7cpLOpYPs+RvYBMETYnSBYEBDAoGAI/ra+tkfv2SHFrPOMjiz
-        T6R6aHkDSTgNPbVtwf9vSsd4gmtXwiRIjs4nQuWxdNu3Teuzao7y2WtzJeH1ZkfF
-        9qxfD6awsH/EQU+nEbEp9kNXxTqTllmCVmSJ0n7wMV47qZG4T/Lanr7yK4hxphb6
-        dfZqbpIonitCPWGMKHufGN0CgYB8yCZuAZ4a01nQFTEaSiRNnzVkB326FvIp4vZ0
-        4ZxFZIDZ2VBRnoI2Gn45eqaAyIQUabX+FFxP7iYgmJ7ClkGwdZpN9BhA0bz2TnuG
-        zg0k05AdkWnAF1iv7BkmDIHfD9Vm8jT9AZByMhf3huiRr6nj7dYvwn9ljvjp5dgo
-        +tsA2wKBgF7pLURG7z1TAM3jKikqjs2UUgPBW+Fd9gpzpgVnujoQnC30/aZvUzUL
-        ZPICIuMYWuFGC/KCrq/X+pMqH6t9WmpX6SFW3TMjKrPOkqf5m7nJHTiHX+DmBfGr
-        bzgHWb/BDGyPxBbv34G6TdlZo64M3pQhz9Yr9DB1QQjkgJpVVds0
-        -----END RSA PRIVATE KEY-----
-  - path: /var/lib/jenkins/.ssh/id_rsa
-    permissions: 0400
-    owner: jenkins:jenkins
-    content: |
-        -----BEGIN RSA PRIVATE KEY-----
-        MIIEowIBAAKCAQEA47rZ0qSOqzLIspnMFvfwSYsms00nJkmsLHLem/9JsvqM2brk
-        0nfUDzr/6BbieH4HoC+GZMnhh21gX0C/nk/fYFLP+0fY2KbRObbCbdZGlOCguMcJ
-        QgcKz0sU9mms4+bPcmnil+j8ljP+KjrBDXiZtl6sYj0CnoD3MlVZfHmLI20xa0aO
-        CUvjLDsgTjVFhtRDdEHXcl4XHPJ5RKT9sEBlKbhCmI/6O1pNxEGEWvwwQE08+9Xl
-        9rJ08/nb/hIuzhTGJdEX/u7jwidxnYbzFyPdgs4jCHDAciqUorlgd/yw6Hs0z2IY
-        GxD9CPs6shx8aRmVLGMf+YnOUQHVD1Hi0FrBFwIDAQABAoIBAQDXekZ/DJu+G7hR
-        XjsBhKrFO7hrsdYYYV9bU3mVS7I1euNpZXD8QMvTeXUI6xZxAnc+t5lHpsoSNYkZ
-        uA9XwaXP46vNzQa+wOF55ZcFDNoOJpmNHS+CXV16FUYJfqZLomqpjM0OBjNyAFI/
-        LQbcMz/mkqAz+ByRU+ASrTWWFP91jSRSWAO/xmRcgqmh02TWlVJRROS3CsWz9C47
-        Ag1diZ4r2d1gFwnc6ZfSTNActLgUNU2NyDsFL4qHipWssGqoclfhsIdL1CLmhTix
-        t8tO0QBSw60H2XqQ0Y77MNfEYgdqvp6XRlB+Uw9Qjf3Y0ukA6ekD3BGfTcaNcq4b
-        4N1WUmTpAoGBAPYCzaWRcXHCJ/0WAUhggvy1kKbAdEtoJfkS3lva9pPgyRx+cTrW
-        98az6NhdD774O3F1GT8RemoX/9JpX0Z2HG3+f0r2vcSqhsyjJSJF6dEU3DMFte+G
-        A67iHnmmfelc1tZKrGuqfrGnFeMQgrmj3ugekKAoyeybPXkd7YTC9cidAoGBAOz6
-        Bbpmvrqr41TOgZCssFjteBNDvDU9NfHtpkgAx7HYkNp4xaWPwlBBydS6Ubsx5RQJ
-        EXf6y5OfCuNkmHTFvubeaG6rg450YKWLO95F5TYfRJdQ6/lkFjhPpsIe9q/QFLP3
-        ZOu+nE2ONCIlUKY7cpLOpYPs+RvYBMETYnSBYEBDAoGAI/ra+tkfv2SHFrPOMjiz
-        T6R6aHkDSTgNPbVtwf9vSsd4gmtXwiRIjs4nQuWxdNu3Teuzao7y2WtzJeH1ZkfF
-        9qxfD6awsH/EQU+nEbEp9kNXxTqTllmCVmSJ0n7wMV47qZG4T/Lanr7yK4hxphb6
-        dfZqbpIonitCPWGMKHufGN0CgYB8yCZuAZ4a01nQFTEaSiRNnzVkB326FvIp4vZ0
-        4ZxFZIDZ2VBRnoI2Gn45eqaAyIQUabX+FFxP7iYgmJ7ClkGwdZpN9BhA0bz2TnuG
-        zg0k05AdkWnAF1iv7BkmDIHfD9Vm8jT9AZByMhf3huiRr6nj7dYvwn9ljvjp5dgo
-        +tsA2wKBgF7pLURG7z1TAM3jKikqjs2UUgPBW+Fd9gpzpgVnujoQnC30/aZvUzUL
-        ZPICIuMYWuFGC/KCrq/X+pMqH6t9WmpX6SFW3TMjKrPOkqf5m7nJHTiHX+DmBfGr
-        bzgHWb/BDGyPxBbv34G6TdlZo64M3pQhz9Yr9DB1QQjkgJpVVds0
-        -----END RSA PRIVATE KEY-----
-
-runcmd:
- - /usr/sbin/sysctl -p
-{% for nic in nics %}{% if nic.nat is defined %}
- - /usr/sbin/iptables -t nat -A POSTROUTING -o {{ nic.name }} -j MASQUERADE
-{% endif %}{% endfor %}
- - /bin/rm -f /etc/yum.repos.d/*.repo
- - /usr/bin/systemctl restart network
-
-"""
-    meta_data_template_string = """
-instance-id: {{ hostname }}
-local-hostname: {{ hostname }}
-
-"""
 
     def __init__(self, hypervisor, conf, definition):
         self.hypervisor = hypervisor
@@ -385,7 +192,7 @@ local-hostname: {{ hostname }}
             self.meta[k] = definition[k]
 
         env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-        self.template = env.from_string(Host.host_template_string)
+        self.template = env.from_string(host_template.HOST)
 
         for nic in definition['nics']:
             self.register_nic(nic)
@@ -423,8 +230,8 @@ local-hostname: {{ hostname }}
             'sEX unsecure')
         env = jinja2.Environment(undefined=jinja2.StrictUndefined)
         contents = {
-            'user-data': env.from_string(Host.user_data_template_string),
-            'meta-data': env.from_string(Host.meta_data_template_string)}
+            'user-data': env.from_string(host_template.USER_DATA),
+            'meta-data': env.from_string(host_template.META_DATA)}
         # TODO(Gonéri): use mktemp
         data_dir = "/tmp/%s_data" % self.hostname_with_prefix
         self.hypervisor.call("mkdir", "-p", data_dir)
@@ -436,7 +243,7 @@ local-hostname: {{ hostname }}
             self.hypervisor.push(fd.name, data_dir + '/' + name)
 
         image = '%s/%s_cloud-init.qcow2' % (
-                Host.host_libvirt_image_dir,
+                host_template.HOST_LIBVIRT_IMAGES_LOCATION,
                 self.hostname_with_prefix)
         self.hypervisor.call(
             'truncate', '--size', '2M', image + '.tmp')
@@ -458,19 +265,21 @@ local-hostname: {{ hostname }}
             self.hypervisor.call(
                 'qemu-img', 'create', '-q', '-f', 'qcow2',
                 '-b', disk['image'],
-                Host.host_libvirt_image_dir + '/' + filename,
-                canical_size(disk['size']))
+                host_template.HOST_LIBVIRT_IMAGES_LOCATION + '/' + filename,
+                canonical_size(disk['size']))
             self.hypervisor.call(
                 'qemu-img', 'resize', '-q',
-                Host.host_libvirt_image_dir + '/' + filename,
-                canical_size(disk['size']))
+                host_template.HOST_LIBVIRT_IMAGES_LOCATION + '/' + filename,
+                canonical_size(disk['size']))
         else:
             self.hypervisor.call(
                 'qemu-img', 'create', '-q', '-f', 'qcow2',
-                Host.host_libvirt_image_dir + '/' + filename,
-                canical_size(disk['size']))
+                host_template.HOST_LIBVIRT_IMAGES_LOCATION + '/' + filename,
+                canonical_size(disk['size']))
 
-        disk.update({'path': Host.host_libvirt_image_dir + '/' + filename})
+        disk.update({'path': "%s/%s" %
+                             (host_template.HOST_LIBVIRT_IMAGES_LOCATION,
+                              filename)})
 
     def register_disk(self, disk):
         disk_cpt = len(self.meta['disks'])
@@ -488,28 +297,6 @@ local-hostname: {{ hostname }}
 
 
 class Network(object):
-    network_template_string = """
-<network>
-  <name>{{ name }}</name>
-  <uuid>{{ uuid }}</uuid>
-  <bridge name='{{ bridge_name }}' stp='on' delay='0'/>
-  <mac address='{{ mac }}'/>
-{% if dhcp is defined %}
-  <forward mode='nat'>
-    <nat>
-      <port start='1024' end='65535'/>
-    </nat>
-  </forward>
-  <ip address='{{ dhcp.address }}' netmask='{{ dhcp.netmask }}'>
-    <dhcp>
-{%if dhcp.range is defined %}
-      <range start='{{ dhcp.range.ipstart }}' end='{{ dhcp.range.ipend }}' />
-{% endif %}
-    </dhcp>
-  </ip>
-{% endif %}
-</network>
-    """
 
     def __init__(self, name, definition):
         self.name = name
@@ -525,7 +312,7 @@ class Network(object):
             self.meta[k] = definition[k]
 
         env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-        self.template = env.from_string(Network.network_template_string)
+        self.template = env.from_string(network_template.NETWORK)
 
     def dump_libvirt_xml(self):
         return self.template.render(self.meta)
@@ -542,7 +329,7 @@ def load_hosts_definition(input_file):
             n.setdefault('mac', random_mac())
             n.setdefault('name', 'eth%d' % i)
             i += 1
-    return(hosts_definition)
+    return hosts_definition
 
 
 def main(argv=sys.argv[1:]):
