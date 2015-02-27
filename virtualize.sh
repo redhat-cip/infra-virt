@@ -46,14 +46,15 @@ arguments:
     -v|--virt=virt_platform.yml   Set the path to the infra's yaml, default: virt_platform.yaml
     -e|--extra='--replace'        Add extra parameters to virtulizor.py
     -p|--prefix                   Change the platform's prefix, default: unix user
+    -s|--socks                    Create a socks server to test your platform
 
 For example:
 ./virtualize.sh -H localhost -d -v virt_platform.yml -e '--replace' -w I.1.2.1,I.1.3.0,I.1.3.1
 will deploy environment I.1.2.1 and upgrade to I.1.3.0 and then I.1.3.1.
 
 and
-./virtualize.sh -H localhost -v virt_platform.yml -e '--replace' -w ../config-tools/
-will deploy the env in your directory config-tools/"
+./virtualize.sh -H localhost -v virt_platform.yml -e '--replace' -w ../config-tools/ -s
+will deploy the env in your directory config-tools/ and create a tunnel socks"
 }
 
 debug() {
@@ -200,11 +201,35 @@ deploy() {
         done"
 
     kill ${tail_job}
+    if [ $do_upgrade -eq 0 ]; then
+        if ! [ -z ${socks+x} ]; then
+            create_socks ${routerip}
+        fi
+    fi
+
+}
+
+create_socks() {
+    local port=1080
+    routerip=$1
+    portlist=$(ssh ${SSHOPTS} root@${virthost} netstat -lntp | awk '{print $4}' | awk -F':' '{print $NF}' | grep 108.)
+    while [ "${portlist}x" != "x" ] ; do
+        if [ $(echo ${portlist} | grep ${port} | wc -l) -eq 1 ]; then
+            ((port++))
+        elif [ ${port} -eq 1090 ]; then
+            echo "Not enough port on this hypervisor, 10 platform launch ..."
+            exit 1
+        else
+            break
+        fi
+    done
+    ssh ${SSHOPTS} -f -N -D 0.0.0.0:${port} ${routerip}
+    echo "Port ${port} for the server socks"
 }
 
 ### Arguments parsing
 
-ARGS=$(getopt -o w:v:e:p:dH:h -l "wordkir:,virt:,extra:,platform,debug,hypervisor:,help" -- "$@");
+ARGS=$(getopt -o w:v:se:p:dH:h -l "wordkir:,virt:,socks,extra:,platform,debug,hypervisor:,help" -- "$@");
 #Bad arguments
 if [ $? -ne 0 ]; then
     usage
@@ -256,6 +281,10 @@ while true; do
                 platform=$1
                 shift;
             fi
+            ;;
+        -s|--socks)
+            socks="True"
+            shift;
             ;;
         --)
             shift
