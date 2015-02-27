@@ -17,7 +17,6 @@
 
 import argparse
 import logging
-import os.path
 import random
 import re
 import string
@@ -75,9 +74,8 @@ def get_conf(argv=sys.argv):
                         help='the name of the libvirt server. The local user '
                         'must be able to connect to the root account with no '
                         'password authentification.')
-    parser.add_argument('--pub-key-file', type=str,
-                        default=os.path.expanduser(
-                            '~/.ssh/id_rsa.pub'),
+    parser.add_argument('--pub-key-file', type=str, action='append',
+                        default=[],
                         help='the path to the SSH public key file that must '
                         'be injected in the install-server root and jenkins '
                         'account')
@@ -403,9 +401,13 @@ local-hostname: {{ hostname }}
 
     def create_cloud_init_image(self):
 
-        ssh_key_file = self.conf.pub_key_file
+        ssh_keys = []
+        for file_path in self.conf.pub_key_file:
+            with open(file_path) as fd:
+                for line in fd.readlines():
+                    ssh_keys.append(line)
         meta = {
-            'ssh_keys': open(ssh_key_file).readlines(),
+            'ssh_keys': ssh_keys,
             'hostname': self.hostname,
             'nics': self.meta['nics']
         }

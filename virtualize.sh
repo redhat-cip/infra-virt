@@ -110,6 +110,13 @@ deploy() {
     shift
     local extra_args=$*
 
+    virtualizor_extra_args="${extra_args} --pub-key-file ${HOME}/.ssh/id_rsa.pub"
+
+    if [ -n "$SSH_AUTH_SOCK" ]; then
+        ssh-add -L > pubfile
+        virtualizor_extra_args+=" --pub-key-file pubfile"
+    fi
+
     if [ ${do_upgrade} = 1 ]; then
         # On upgrade, we redeploy the install-server and the router.
         drop_host ${PREFIX}_${installserver_name}
@@ -119,7 +126,7 @@ deploy() {
         jenkins_job_name="puppet"
     fi
 
-    $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat --pub-key-file ${pubfile} ${extra_args}
+    $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat --pub-key-file ${pubfile} ${virtualizor_extra_args}
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
     local mac=$(get_mac ${router_name})
