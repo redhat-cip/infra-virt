@@ -126,9 +126,11 @@ deploy() {
     routerip=$(get_ip ${mac})
 
     local retry=0
-    for user_name in root jenkins; do
-        chmod 755 ${ctdir}/top/${user_name} ${ctdir}/top/${user_name}/.ssh || true
-        chmod 600 ${ctdir}/top/${user_name}/.ssh/id_rsa || true
+    for user_home in /root/root /var/lib/jenkins; do
+        chmod -f 755 ${ctdir}/top${user_home} ${ctdir}/top${user_home}/.ssh || true
+        # We do not copy the /root/.ssh/id_rsa to preserve our “unsecure” private SSH key
+        # and continue to be able to connect to the different nodes
+        rm -f ${ctdir}/top/${user_home}/.ssh/id_rsa
     done
     while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner ${ctdir}/top/ root@$installserverip:/; do
         if [ $((retry++)) -gt 300 ]; then
