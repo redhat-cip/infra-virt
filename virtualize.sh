@@ -132,7 +132,7 @@ deploy() {
         # and continue to be able to connect to the different nodes
         rm -f ${ctdir}/top/${user_home}/.ssh/id_rsa
     done
-    while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner ${ctdir}/top/ root@$installserverip:/; do
+    while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner --no-group ${ctdir}/top/ root@$installserverip:/; do
         if [ $((retry++)) -gt 300 ]; then
             echo "reached max retries"
             exit 1
