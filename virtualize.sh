@@ -126,7 +126,11 @@ deploy() {
     routerip=$(get_ip ${mac})
 
     local retry=0
-    while ! rsync -e "ssh ${SSHOPTS}" --quiet -av --no-owner ${ctdir}/top/ root@${installserverip}:/; do
+    for user_name in root jenkins; do
+        chmod 755 ${ctdir}/top/${user_name} ${ctdir}/top/${user_name}/.ssh || true
+        chmod 600 ${ctdir}/top/${user_name}/.ssh/id_rsa || true
+    done
+    while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner ${ctdir}/top/ root@$installserverip:/; do
         if [ $((retry++)) -gt 300 ]; then
             echo "reached max retries"
             exit 1
