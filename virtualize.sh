@@ -93,6 +93,16 @@ get_mac() {
     echo ${mac}
 }
 
+drop_host() {
+    local host=$1
+
+    ssh $SSHOPTS root@$virthost virsh destroy ${host}
+    for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name ${host}); do
+        ssh $SSHOPTS root@$virthost virsh snapshot-delete ${host} ${snapshot}
+    done
+    ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${host}
+}
+
 deploy() {
     local ctdir=$1
     shift
@@ -100,28 +110,36 @@ deploy() {
     shift
     local extra_args=$*
 
+    virtualizor_extra_args="${extra_args} --pub-key-file ${HOME}/.ssh/id_rsa.pub"
+
+    if [ -n "$SSH_AUTH_SOCK" ]; then
+        ssh-add -L > pubfile
+        virtualizor_extra_args+=" --pub-key-file pubfile"
+    fi
+
     if [ ${do_upgrade} = 1 ]; then
-        if $(ssh ${SSHOPTS} root@${virthost} virsh desc ${PREFIX}_${installserver_name} >/dev/null 2>&1); then
-            # TODO(Gonéri): we need a better way to identify the install-server
-            ssh $SSHOPTS root@${virthost} virsh destroy ${PREFIX}_${installserver_name}
-            for snapshot in $(ssh $SSHOPTS root@${virthost} virsh snapshot-list --name goneri_${installserver_name}); do
-                ssh $SSHOPTS root@${virthost} virsh snapshot-delete ${PREFIX}_${installserver_name} ${snapshot}
-            done
-            ssh $SSHOPTS root@${virthost} virsh undefine --remove-all-storage ${PREFIX}_${installserver_name}
-            jenkins_job_name="upgrade"
-        fi
+        # On upgrade, we redeploy the install-server and the router.
+        drop_host ${PREFIX}_${installserver_name}
+        drop_host ${PREFIX}_router
+        jenkins_job_name="upgrade"
     else
         jenkins_job_name="puppet"
     fi
 
-    $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat --pub-key-file ${pubfile} ${extra_args}
+    $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat --pub-key-file ${pubfile} ${virtualizor_extra_args}
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
     local mac=$(get_mac ${router_name})
     routerip=$(get_ip ${mac})
 
     local retry=0
-    while ! rsync -e "ssh ${SSHOPTS}" --quiet -av --no-owner ${ctdir}/top/ root@${installserverip}:/; do
+    for user_home in /root/root /var/lib/jenkins; do
+        chmod -f 755 ${ctdir}/top${user_home} ${ctdir}/top${user_home}/.ssh || true
+        # We do not copy the /root/.ssh/id_rsa to preserve our “unsecure” private SSH key
+        # and continue to be able to connect to the different nodes
+        rm -f ${ctdir}/top/${user_home}/.ssh/id_rsa
+    done
+    while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner --no-group ${ctdir}/top/ root@$installserverip:/; do
         if [ $((retry++)) -gt 300 ]; then
             echo "reached max retries"
             exit 1
