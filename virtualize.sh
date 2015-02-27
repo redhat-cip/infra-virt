@@ -47,14 +47,15 @@ arguments:
     -e|--extra='--replace'        Add extra parameters to virtulizor.py
     -p|--prefix                   Change the platform's prefix, default: unix user
     -s|--socks                    Create a socks server to test your platform
+    -t|--tempest                  Launch the sanity job at the end of a deployement
 
 For example:
 ./virtualize.sh -H localhost -d -v virt_platform.yml -e '--replace' -w I.1.2.1,I.1.3.0,I.1.3.1
 will deploy environment I.1.2.1 and upgrade to I.1.3.0 and then I.1.3.1.
 
 and
-./virtualize.sh -H localhost -v virt_platform.yml -e '--replace' -w ../config-tools/ -s
-will deploy the env in your directory config-tools/ and create a tunnel socks"
+./virtualize.sh -H localhost -v virt_platform.yml -e '--replace' -w ../config-tools/ -s -t
+will deploy the env in your directory config-tools/, create a tunnel socks and launch tempest"
 }
 
 debug() {
@@ -207,6 +208,25 @@ deploy() {
         fi
     fi
 
+    if [ ${tempest} == "True" ]; then
+        #Launch Sanity and show the logs
+        curl --silent http://${installserverip}:8282/job/sanity/build
+        sanity_log_file="/var/lib/jenkins/jobs/sanity/builds/1/log"
+        (
+            ssh ${SSHOPTS} root@${installserverip} "
+                while true; do
+                    [ -f ${sanity_log_file} ] && tail -n 1000 -f ${sanity_log_file}
+                    sleep 1
+                done"
+        ) &
+
+        #Wait until build finish
+        ssh ${SSHOPTS} root@${installserverip} "
+            while true; do
+                test -f /var/lib/jenkins/jobs/sanity/builds/1/build.xml && break;
+                sleep 1;
+            done"
+    fi
 }
 
 create_socks() {
@@ -229,7 +249,7 @@ create_socks() {
 
 ### Arguments parsing
 
-ARGS=$(getopt -o w:v:se:p:dH:h -l "wordkir:,virt:,socks,extra:,platform,debug,hypervisor:,help" -- "$@");
+ARGS=$(getopt -o w:v:ste:p:dH:h -l "wordkir:,virt:,socks,tempest,extra:,platform,debug,hypervisor:,help" -- "$@");
 #Bad arguments
 if [ $? -ne 0 ]; then
     usage
@@ -284,6 +304,10 @@ while true; do
             ;;
         -s|--socks)
             socks="True"
+            shift;
+            ;;
+        -t|--tempest)
+            tempest="True"
             shift;
             ;;
         --)
