@@ -162,7 +162,7 @@ def collect(config_path, qcow, sps_version, images_url):
         virt_platform["hosts"][hostname]["nics"] = nics
 
     if images_url:
-        virt_platform["images-url"] = images_url
+        virt_platform["images-url"] = "%s/%s" % (images_url, sps_version)
 
     return virt_platform
 
