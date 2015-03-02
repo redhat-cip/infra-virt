@@ -134,7 +134,7 @@ deploy() {
     routerip=$(get_ip ${mac})
 
     local retry=0
-    for user_home in /root/root /var/lib/jenkins; do
+    for user_home in /root /var/lib/jenkins; do
         chmod -f 755 ${ctdir}/top${user_home} ${ctdir}/top${user_home}/.ssh || true
         # We do not copy the /root/.ssh/id_rsa to preserve our “unsecure” private SSH key
         # and continue to be able to connect to the different nodes
