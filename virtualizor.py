@@ -101,28 +101,28 @@ def get_conf(argv=sys.argv):
 
 class Hypervisor(object):
     def __init__(self, conf):
-        self.target_host = conf.target_host
+        self._conf = conf
         self.conn = libvirt.open('qemu+ssh://root@%s/system' %
-                                 conf.target_host)
-        self.emulator = self.find_emulator()
+                                 self._conf.target_host)
+        self.emulator = self._find_emulator()
         if self.emulator is None:
             logging.error("No emulator found")
-            exit(2)
+            sys.exit(2)
 
-    def find_emulator(self):
+    def _find_emulator(self):
         for location in ('/usr/bin/qemu-system-x86_64',
                          '/usr/libexec/qemu-kvm'):
             if self.call('test', '-f', location) == 0:
                 return location
         return None
 
-    def create_networks(self, conf):
-        existing_networks = ([n.name() for n in self.conn.listAllNetworks()])
+    def create_networks(self):
+        existing_networks = [n.name() for n in self.conn.listAllNetworks()]
         # Ensure the public_network is defined, we don't replace this network,
         # even if --replace is used because other VM may by connected to the
         # same networks.
-        if conf.public_network not in existing_networks:
-            pub_net = Network(conf.public_network, {
+        if self._conf.public_network not in existing_networks:
+            pub_net = Network(self._conf.public_network, {
                 "dhcp": {"address": "192.168.140.1",
                          "netmask": "255.255.255.0",
                          "range": {
@@ -130,14 +130,14 @@ class Hypervisor(object):
                              "ipend": "192.168.140.254"}}})
             self.conn.networkCreateXML(pub_net.dump_libvirt_xml())
         self.public_net = self.conn.networkLookupByName(
-            conf.public_network)
+            self._conf.public_network)
         if not self.public_net.isActive():
             self.public_net.create()
 
-        net_definitions = {("%s_sps" % conf.prefix): {}}
+        net_definitions = {"%s_sps" % self._conf.prefix: {}}
         for netname in net_definitions:
             exists = netname in existing_networks
-            if exists and conf.replace:
+            if exists and self._conf.replace:
                 self.conn.networkLookupByName(netname).destroy()
                 logging.info("Cleaning network %s." % netname)
                 exists = False
@@ -146,7 +146,7 @@ class Hypervisor(object):
                 network = Network(netname, net_definitions[netname])
                 self.conn.networkCreateXML(network.dump_libvirt_xml())
         self.public_net = self.conn.networkLookupByName(
-            conf.public_network)
+            self._conf.public_network)
 
     def wait_for_lease(self, mac):
         while True:
@@ -157,10 +157,10 @@ class Hypervisor(object):
 
     def push(self, source, dest):
         subprocess.call(['scp', '-q', '-r', source,
-                         'root@%s' % self.target_host + ':' + dest])
+                         'root@%s' % self._conf.target_host + ':' + dest])
 
     def call(self, *kargs):
-        return subprocess.call(['ssh', 'root@%s' % self.target_host] +
+        return subprocess.call(['ssh', 'root@%s' % self._conf.target_host] +
                                list(kargs))
 
     class MissingPublicNetwork(Exception):
@@ -169,15 +169,15 @@ class Hypervisor(object):
 
 class Host(object):
 
-    def __init__(self, hypervisor, conf, definition):
+    def __init__(self, hypervisor, conf, host_definition):
         self.hypervisor = hypervisor
         self.conf = conf
-        self.hostname = definition['hostname']
-        self.hostname_with_prefix = definition['hostname_with_prefix']
+        self.hostname = host_definition['hostname']
+        self.hostname_with_prefix = host_definition['hostname_with_prefix']
 
-        self.meta = {'hostname': definition['hostname'],
+        self.meta = {'hostname': host_definition['hostname'],
                      'hostname_with_prefix':
-                         definition['hostname_with_prefix'],
+                         host_definition['hostname_with_prefix'],
                      'uuid': str(uuid.uuid1()),
                      'emulator': self.hypervisor.emulator,
                      'memory': 8 * 1024 ** 2,
@@ -187,26 +187,26 @@ class Host(object):
 
         for k in ('uuid', 'serial', 'product_name',
                   'memory', 'ncpus'):
-            if k not in definition:
+            if k not in host_definition:
                 continue
-            self.meta[k] = definition[k]
+            self.meta[k] = host_definition[k]
 
         env = jinja2.Environment(undefined=jinja2.StrictUndefined)
         self.template = env.from_string(host_template.HOST)
 
-        for nic in definition['nics']:
-            self.register_nic(nic)
-        for disk in definition['disks']:
-            self.initialize_disk(disk)
-            self.register_disk(disk)
-        if 'image' in definition['disks'][0]:
-            cloud_init_image = self.create_cloud_init_image()
-            self.register_disk(cloud_init_image)
+        for nic in host_definition['nics']:
+            self._register_nic(nic)
+        for disk in host_definition['disks']:
+            self._initialize_disk(disk)
+            self._register_disk(disk)
+        if 'image' in host_definition['disks'][0]:
+            cloud_init_image = self._create_cloud_init_image()
+            self._register_disk(cloud_init_image)
 
         self.meta['nics'][0]['boot_order'] = 2
         self.meta['disks'][0]['boot_order'] = 1
 
-    def create_cloud_init_image(self):
+    def _create_cloud_init_image(self):
 
         ssh_keys = []
         for file_path in self.conf.pub_key_file:
@@ -256,9 +256,9 @@ class Host(object):
             'qemu-img', 'convert', '-O', 'qcow2', image + '.tmp', image)
         self.hypervisor.call(
             'rm', image + '.tmp')
-        return({'path': image})
+        return {'path': image}
 
-    def initialize_disk(self, disk):
+    def _initialize_disk(self, disk):
         disk_cpt = len(self.meta['disks'])
         filename = "%s-%03d.qcow2" % (self.hostname_with_prefix, disk_cpt)
         if 'image' in disk:
@@ -281,12 +281,12 @@ class Host(object):
                              (host_template.HOST_LIBVIRT_IMAGES_LOCATION,
                               filename)})
 
-    def register_disk(self, disk):
+    def _register_disk(self, disk):
         disk_cpt = len(self.meta['disks'])
         disk['name'] = 'vd' + string.ascii_lowercase[disk_cpt]
         self.meta['disks'].append(disk)
 
-    def register_nic(self, nic):
+    def _register_nic(self, nic):
         nic.setdefault('network_name', '%s_sps' % self.conf.prefix)
         if nic['network_name'] == '__public_network__':
             nic['network_name'] = self.conf.public_network
@@ -298,30 +298,29 @@ class Host(object):
 
 class Network(object):
 
-    def __init__(self, name, definition):
-        self.name = name
-        self.meta = {
+    def __init__(self, name, network_definition):
+        self._template_values = {
             'name': name,
             'uuid': str(uuid.uuid1()),
             'mac': random_mac(),
             'bridge_name': 'virbr%d' % random.randrange(0, 0xffffffff)}
 
         for k in ('uuid', 'mac', 'ips', 'dhcp'):
-            if k not in definition:
+            if k not in network_definition:
                 continue
-            self.meta[k] = definition[k]
+            self._template_values[k] = network_definition[k]
 
         env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-        self.template = env.from_string(network_template.NETWORK)
+        self._template = env.from_string(network_template.NETWORK)
 
     def dump_libvirt_xml(self):
-        return self.template.render(self.meta)
+        return self._template.render(self._template_values)
 
 
-def load_hosts_definition(input_file):
-    hosts_definition = yaml.load(open(input_file, 'r'))
+def load_infra_description(input_file):
+    infra_description = yaml.load(open(input_file, 'r'))
 
-    for hostname, definition in six.iteritems(hosts_definition['hosts']):
+    for hostname, definition in six.iteritems(infra_description['hosts']):
         i = 0
         # Add the missing MAC because we use them later to know then the DHCP
         # give the IP
@@ -329,22 +328,22 @@ def load_hosts_definition(input_file):
             n.setdefault('mac', random_mac())
             n.setdefault('name', 'eth%d' % i)
             i += 1
-    return hosts_definition
+    return infra_description
 
 
 def main(argv=sys.argv[1:]):
     conf = get_conf(argv)
-    hosts_definition = load_hosts_definition(conf.input_file)
+    infra_description = load_infra_description(conf.input_file)
     hypervisor = Hypervisor(conf)
-    hypervisor.create_networks(conf)
+    hypervisor.create_networks()
 
-    hosts = hosts_definition['hosts']
-    existing_hosts = ([n.name() for n in hypervisor.conn.listAllDomains()])
+    hosts = infra_description['hosts']
+    existing_hosts = [n.name() for n in hypervisor.conn.listAllDomains()]
     for hostname in sorted(hosts):
-        definition = hosts[hostname]
+        host_description = hosts[hostname]
         hostname_with_prefix = "%s_%s" % (conf.prefix, hostname)
-        definition['hostname'] = hostname
-        definition['hostname_with_prefix'] = hostname_with_prefix
+        host_description['hostname'] = hostname
+        host_description['hostname_with_prefix'] = hostname_with_prefix
         exists = hostname_with_prefix in existing_hosts
         if exists and conf.replace:
             dom = hypervisor.conn.lookupByName(hostname_with_prefix)
@@ -355,16 +354,17 @@ def main(argv=sys.argv[1:]):
                 dom.undefine()
             exists = False
         if not exists:
-            host = Host(hypervisor, conf, definition)
+            host = Host(hypervisor, conf, host_description)
             hypervisor.conn.defineXML(host.dump_libvirt_xml())
             dom = hypervisor.conn.lookupByName(hostname_with_prefix)
             dom.create()
         else:
-            logging.info("a host called %s is already defined, skipping "
+            logging.info("Host '%s' is already defined, skipping "
                          "(see: --replace)." % hostname_with_prefix)
 
-    for hostname, definition in six.iteritems(hosts_definition['hosts']):
-        for n in definition['nics']:
+    for hostname, host_description in \
+            six.iteritems(infra_description['hosts']):
+        for n in host_description['nics']:
             try:
                 if n['network_name'] != conf.public_network:
                     continue
@@ -373,9 +373,9 @@ def main(argv=sys.argv[1:]):
             except KeyError:
                 continue
 
-            logging.info("Waiting for %s DHCP query with MAC %s" % (
+            logging.info("Waiting for '%s' DHCP query with MAC '%s'" % (
                 hostname, n['mac']))
-            logging.info("Host %s has public IP: %s" % (
+            logging.info("Host '%s' has public IP: '%s'" % (
                 hostname, hypervisor.wait_for_lease(n['mac'])))
 
 
