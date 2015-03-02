@@ -223,12 +223,12 @@ runcmd:
  - /bin/rm -f /etc/yum.repos.d/*.repo
  - /usr/sbin/systemctl restart network
  - /usr/sbin/service networking restart
+
+bootcmd:
  - /sbin/sysctl -p
 {% for nic in nics %}{% if nic.nat is defined %}
  - /sbin/iptables -t nat -A POSTROUTING -o {{ nic.name }} -j MASQUERADE
 {% endif %}{% endfor %}
- - /sbin/rm -f /etc/yum.repos.d/*.repo
- - /usr/sbin/systemctl restart network || /usr/sbin/service networking restart
 
 """
 
