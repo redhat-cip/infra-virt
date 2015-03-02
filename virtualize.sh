@@ -29,6 +29,7 @@ routerip=""
 installserverip=""
 virthost="localhost"
 platform="virt_platform.yaml"
+tempest=""
 
 ### Handler Functions
 
