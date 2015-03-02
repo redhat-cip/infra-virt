@@ -227,7 +227,7 @@ deploy() {
         fi
     fi
 
-    if [ ${tempest} == "True" ]; then
+    if [ "${tempest}x" == "Truex" ]; then
         #Launch Sanity and show the logs
         curl --silent http://${installserverip}:8282/job/sanity/build
         sanity_log_file="/var/lib/jenkins/jobs/sanity/builds/1/log"
@@ -262,7 +262,7 @@ create_socks() {
             break
         fi
     done
-    ssh ${SSHOPTS} -f -N -D 0.0.0.0:${port} ${routerip}
+    ssh -f -N -D 0.0.0.0:${port} ${routerip}
     echo "Port ${port} for the server socks"
 }
 
