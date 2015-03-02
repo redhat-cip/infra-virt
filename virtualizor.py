@@ -36,6 +36,8 @@ import yaml
 
 logging.basicConfig(level=logging.DEBUG)
 
+_LIBVIRT_IMAGE_DIR = "/var/lib/libvirt/images/"
+
 
 def random_mac():
     return "52:54:00:%02x:%02x:%02x" % (
@@ -100,8 +102,9 @@ def get_conf(argv=sys.argv):
 
 
 class Hypervisor(object):
-    def __init__(self, conf):
+    def __init__(self, conf, infra_description):
         self._conf = conf
+        self._infra_description = infra_description
         self.conn = libvirt.open('qemu+ssh://root@%s/system' %
                                  self._conf.target_host)
         self.emulator = self._find_emulator()
@@ -115,6 +118,31 @@ class Hypervisor(object):
             if self.call('test', '-f', location) == 0:
                 return location
         return None
+
+    def download_images(self):
+
+        if "images-url" not in self._infra_description:
+            logging.warn("Images url is not provided by the infra description,"
+                         " no images will be downloaded from the hypervisor.")
+            return
+
+        images_url = self._infra_description["images-url"]
+        for host in self._infra_description["hosts"]:
+            host_disks = self._infra_description["hosts"][host]["disks"]
+            for disk in host_disks:
+                if "image" not in disk:
+                    continue
+                libvirt_img = "%s/%s" % (_LIBVIRT_IMAGE_DIR, disk["image"])
+                exist_img = self.call("test", "-s", libvirt_img)
+                if exist_img == 0:
+                    continue
+                wget_status = self.call('wget', '--continue', '--no-verbose',
+                                        '-O', libvirt_img,
+                                        "%s/%s" % (images_url, disk["image"]))
+                if wget_status != 0:
+                    logging.error("Failed to download '%s' from '%s'" %
+                                  (disk["image"], images_url))
+                logging.info("Downloaded image '%s'" % libvirt_img)
 
     def create_networks(self):
         existing_networks = [n.name() for n in self.conn.listAllNetworks()]
@@ -334,7 +362,9 @@ def load_infra_description(input_file):
 def main(argv=sys.argv[1:]):
     conf = get_conf(argv)
     infra_description = load_infra_description(conf.input_file)
-    hypervisor = Hypervisor(conf)
+    hypervisor = Hypervisor(conf, infra_description)
+
+    hypervisor.download_images()
     hypervisor.create_networks()
 
     hosts = infra_description['hosts']
