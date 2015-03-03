@@ -97,6 +97,10 @@ get_mac() {
 drop_host() {
     local host=$1
 
+    if ! ssh $SSHOPTS root@$virthost virsh domid ${host}; then
+        return
+    fi
+
     ssh $SSHOPTS root@$virthost virsh destroy ${host}
     for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name ${host}); do
         ssh $SSHOPTS root@$virthost virsh snapshot-delete ${host} ${snapshot}
