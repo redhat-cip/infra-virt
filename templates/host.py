@@ -134,6 +134,24 @@ write_files:
       NETWORKING=yes
       NOZEROCONF=no
       HOSTNAME={{ hostname }}
+  - path: /etc/network/interfaces
+    content: |
+       auto lo
+       iface lo inet loopback
+{% for nic in nics %}
+       auto {{ nic.name }}
+{% if nic.ip is defined %}
+       iface eth0 inet static
+       address {{ nic.ip }}
+       netmask {{ nic.netmask }}
+       network {{ nic.network }}
+{% if nic.gateway is defined %}
+       gateway {{ nic.gateway }}
+{% endif %}
+{% else %}
+       iface {{ nic.name }} inet dhcp
+{% endif %}
+{% endfor %}
   - path: /etc/sysctl.conf
     content: |
       net.ipv4.ip_forward = 1
@@ -200,13 +218,17 @@ write_files:
         bzgHWb/BDGyPxBbv34G6TdlZo64M3pQhz9Yr9DB1QQjkgJpVVds0
         -----END RSA PRIVATE KEY-----
 
+
 runcmd:
- - /usr/sbin/sysctl -p
-{% for nic in nics %}{% if nic.nat is defined %}
- - /usr/sbin/iptables -t nat -A POSTROUTING -o {{ nic.name }} -j MASQUERADE
-{% endif %}{% endfor %}
  - /bin/rm -f /etc/yum.repos.d/*.repo
- - /usr/bin/systemctl restart network
+ - /usr/sbin/systemctl restart network
+ - /usr/sbin/service networking restart
+
+bootcmd:
+ - /sbin/sysctl -p
+{% for nic in nics %}{% if nic.nat is defined %}
+ - /sbin/iptables -t nat -A POSTROUTING -o {{ nic.name }} -j MASQUERADE
+{% endif %}{% endfor %}
 
 """
 
