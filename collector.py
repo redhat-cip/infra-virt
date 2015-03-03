@@ -107,10 +107,11 @@ def collect(config_path, qcow, sps_version, images_url):
     img = "%s-%s.img.qcow2" % ("install-server", sps_version)
     virt_platform["hosts"]["router"]["disks"] = [{'size': '15Gi',
                                                   'image': img}]
-    # adds image checksum
+    # adds image checksum to the router
     checksum = _get_checksum(images_url, sps_version, img)
     images_checksums[img] = checksum
-    virt_platform["hosts"]["router"]["disks"][0]['checksum'] = checksum
+    if checksum:
+        virt_platform["hosts"]["router"]["disks"][0]['checksum'] = checksum
 
     virt_platform["hosts"]["router"]["nics"] = [_get_router_nic(config_path)]
     virt_platform["hosts"]["router"]["nics"].append(dict(INT_DHCP))
@@ -133,8 +134,9 @@ def collect(config_path, qcow, sps_version, images_url):
             if 'disks' not in virt_platform["hosts"][hostname]:
                 virt_platform["hosts"][hostname]["disks"] = [{'size': '40Gi'}]
             virt_platform["hosts"][hostname]["disks"][0]['image'] = img
-            virt_platform["hosts"][hostname]["disks"][0]['checksum'] = \
-                images_checksums.get(img)
+            if images_checksums.get(img):
+                virt_platform["hosts"][hostname]["disks"][0]['checksum'] = \
+                    images_checksums.get(img)
 
         # add the profile
         virt_platform["hosts"][hostname]["profile"] = \
@@ -143,6 +145,7 @@ def collect(config_path, qcow, sps_version, images_url):
     # release the lock obtained during the load call
     state_obj.unlock()
 
+    # adds network info to the hosts
     for hostname in global_conf["hosts"]:
         admin_network = global_conf["config"]["admin_network"]
         admin_network = netaddr.IPNetwork(admin_network)
