@@ -111,12 +111,20 @@ deploy() {
     shift
     local extra_args=$*
 
-    virtualizor_extra_args="${extra_args} --pub-key-file ${HOME}/.ssh/id_rsa.pub"
+    tmp_ssh_pub_key=$(mktemp)
+
+    virtualizor_extra_args="${extra_args} --pub-key-file ${HOME}/.ssh/id_rsa.pub --pub-key-file ${tmp_ssh_pub_key}"
 
     if [ -n "$SSH_AUTH_SOCK" ]; then
-        ssh-add -L > pubfile
-        virtualizor_extra_args+=" --pub-key-file pubfile"
+        ssh-add -L > ${tmp_ssh_pub_key}
     fi
+
+    for user_home in /root /var/lib/jenkins; do
+        chmod -f 755 ${ctdir}/top${user_home} ${ctdir}/top${user_home}/.ssh || true
+        if [ -f ${ctdir}/top${user_home}/.ssh ]; then
+            ssh-keygen -y -f ${ctdir}/top${user_home}/.ssh/id_rsa >> ${tmp_ssh_pub_key}
+        fi
+    done
 
     if [ ${do_upgrade} = 1 ]; then
         # On upgrade, we redeploy the install-server and the router.
@@ -128,15 +136,13 @@ deploy() {
     fi
 
     $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat --pub-key-file ${pubfile} ${virtualizor_extra_args}
+    rm ${tmp_ssh_pub_key}
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
     local mac=$(get_mac ${router_name})
     routerip=$(get_ip ${mac})
 
     local retry=0
-    for user_home in /root /var/lib/jenkins; do
-        chmod -f 755 ${ctdir}/top${user_home} ${ctdir}/top${user_home}/.ssh || true
-    done
     while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner --no-group ${ctdir}/top/ root@$installserverip:/; do
         if [ $((retry++)) -gt 300 ]; then
             echo "reached max retries"
@@ -156,6 +162,7 @@ deploy() {
     ssh ${SSHOPTS} root@${installserverip} /tmp/extract-archive.sh
     ssh ${SSHOPTS} root@${installserverip} rm /tmp/extract-archive.sh /tmp/functions
     ssh ${SSHOPTS} root@${installserverip} "ssh-keygen -y -f ~jenkins/.ssh/id_rsa >> ~jenkins/.ssh/authorized_keys"
+    ssh ${SSHOPTS} root@${installserverip} "ssh-keygen -y -f ~root/.ssh/id_rsa >> ~root/.ssh/authorized_keys"
     ssh ${SSHOPTS} root@${installserverip} service dnsmasq restart
     ssh ${SSHOPTS} root@${installserverip} service httpd restart
     ssh ${SSHOPTS} root@${installserverip} service rsyncd restart
@@ -177,6 +184,9 @@ deploy() {
             sleep 1
             echo -n .
             ssh $SSHOPTS jenkins@\${node} uname > /dev/null 2>&1|| continue 2
+            ssh ${SSHOPTS} jenkins@\${node} '
+                sudo test -s /root/.ssh/authorized_keys || sudo cp ~jenkins/.ssh/authorized_keys /root/.ssh/authorized_keys
+            '
             # NOTE(Gonéri): on I.1.2.1, the ci.pem file is deployed through
             # cloud-init. Since we can use our own cloud-init files, this file
             # is not installed correctly.
