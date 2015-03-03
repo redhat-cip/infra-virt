@@ -221,7 +221,7 @@ write_files:
 
 runcmd:
  - /bin/rm -f /etc/yum.repos.d/*.repo
- - /usr/sbin/systemctl restart network
+ - /bin/systemctl restart network
  - /usr/sbin/service networking restart
 
 bootcmd:
