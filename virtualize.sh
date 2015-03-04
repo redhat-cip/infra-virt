@@ -98,12 +98,6 @@ done
 
 ### Handler stuff
 
-# Default values if not set by user env
-TIMEOUT_ITERATION=${TIMEOUT_ITERATION:-"150"}
-LOG_DIR=${LOG_DIR:-"$(pwd)/logs"}
-
-SSHOPTS="-oBatchMode=yes -oCheckHostIP=no -oHashKnownHosts=no  -oStrictHostKeyChecking=no -oPreferredAuthentications=publickey  -oChallengeResponseAuthentication=no -oKbdInteractiveDevices=no -oUserKnownHostsFile=/dev/null -oControlPath=~/.ssh/control-%r@%h:%p -oControlMaster=auto -oControlPersist=30"
-
 
 do_upgrade=0
 IFS=","
