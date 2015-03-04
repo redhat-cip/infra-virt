@@ -26,7 +26,7 @@ router_name="router"
 routerip=""
 installserverip=""
 virthost="localhost"
-platform="virt_platform.yaml"
+platform="virt_platform.yml"
 tempest=""
 
 ### Handler Functions
@@ -205,7 +205,7 @@ deploy() {
     fi
 
 
-    $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat ${virtualizor_extra_args}
+    $ORIG/virtualizor.py ${ctdir}/${platform} ${virthost} --prefix ${PREFIX} --public_network nat ${virtualizor_extra_args}
     rm ${tmp_ssh_pub_key}
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
