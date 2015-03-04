@@ -31,7 +31,6 @@ arguments:
     -h|--help                     Show this help
     -H|--hypervisor=name          Set the hypervisor hostname, default (${virthost})
     -d|--debug                    Set the debug mode for this script, default: disabled
-    -w|--wordkir=dir1,dir2,...    Workdir List, default: None
     -v|--virt=virt_platform.yml   Set the path to the infra's yaml, default: (${platform})
     -e|--extra='--replace'        Add extra parameters to virtulizor.py
     -p|--prefix                   Change the platform's prefix, default: unix user
@@ -39,11 +38,11 @@ arguments:
     -t|--tempest                  Launch the sanity job at the end of a deployement
 
 For example:
-./virtualize.sh -H localhost -d -v virt_platform.yml -e '--replace' -w I.1.2.1,I.1.3.0,I.1.3.1
-will deploy environment I.1.2.1 and upgrade to I.1.3.0 and then I.1.3.1.
+./virtualize.sh -H localhost -e '--replace' I.1.2.1/
+will deploy the environment from the I.1.2.1/ directory.
 
 and
-./virtualize.sh -H localhost -v virt_platform.yml -e '--replace' -w ../config-tools/ -s -t
+./virtualize.sh -H localhost -e '--replace' -w ../config-tools/ --sockets --tempest
 will deploy the env in your directory config-tools/, create a tunnel socks and launch tempest"
 }
 
@@ -60,6 +59,8 @@ if [ $? -ne 0 ]; then
     usage
     exit 1
 fi
+
+extra_args=""
 
 eval set -- "$ARGS";
 while true; do
@@ -93,13 +94,6 @@ while true; do
                 shift;
             fi
             ;;
-        -w|--workdir)
-            shift;
-            if [ -n "$1" ]; then
-                workdirs=$1
-                shift;
-            fi
-            ;;
         -v|--virt)
             shift;
             if [ -n "$1" ]; then
@@ -127,23 +121,18 @@ while true; do
     esac
 done
 
+workdir=$1
+
 [ -f ~/virtualizerc ] && source ~/virtualizerc
 
 ### Handler stuff
 
+deploy ${workdir} ${extra_args}
+call_jenkins_job "puppet"
 
-do_upgrade=0
-IFS=","
-for workdir in ${workdirs}; do
-    unset IFS
-    if [ -z ${extra_args+x} ]; then
-        deploy ${workdir} ${do_upgrade}
-    else
-        deploy ${workdir} ${do_upgrade} ${extra_args}
-    fi
-    do_upgrade=1
-done
-unset IFS
+if [ "${tempest}x" == "Truex" ]; then
+    call_jenkins_job "sanity"
+fi
 
 # Dump elasticsearch logs into ${LOG_DIR},
 # upload_logs will update the dump in swift.

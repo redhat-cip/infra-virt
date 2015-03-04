@@ -139,6 +139,6 @@ virtualize.sh will use the first argument as the location of the
 SpinalStack environment to deploy. It will then upgrade the newly deployed
 SpinalStack to the following environment directory.
 
-For example: ./virtualize.sh I.1.2.1 I.1.3.0 I.1.3.1
-will deploy environment I.1.2.1 and upgrade to I.1.3.0 and then I.1.3.1.
+For example: ./virtualize.sh I.1.2.1/
+will deploy environment from the I.1.2.1/ directory.
 ```
