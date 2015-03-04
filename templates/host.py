@@ -22,8 +22,6 @@ HOST = """
   <memory unit='KiB'>{{ memory }}</memory>
   <currentmemory unit='KiB'>{{ memory }}</currentmemory>
   <vcpu>{{ ncpus }}</vcpu>
-  <cpu mode='host-passthrough'>
-  </cpu>
   <os>
     <smbios mode='sysinfo'/>
     <type arch='x86_64' machine='pc'>hvm</type>
