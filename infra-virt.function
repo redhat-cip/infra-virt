@@ -118,7 +118,7 @@ upgrade_to() {
     shift
 
     drop_hosts ${installserver_name} router
-    deploy ${ctdir} 1
+    deploy ${ctdir} "upgrade"
 }
 
 snapshot_create() {
@@ -188,8 +188,11 @@ snapshot_restore() {
 deploy() {
     local ctdir=$1
     shift
-    local do_upgrade=$1
-    shift
+    local jenkins_job_name="puppet"
+    if [ $# -gt 1 ]; then
+        jenkins_job_name=$1
+        shift
+    fi
     local extra_args=$*
 
     tmp_ssh_pub_key=$(mktemp)
@@ -207,14 +210,6 @@ deploy() {
         fi
     done
 
-    if [ ${do_upgrade} = 1 ]; then
-        # On upgrade, we redeploy the install-server and the router.
-        drop_host ${PREFIX}_${installserver_name}
-        drop_host ${PREFIX}_router
-        jenkins_job_name="upgrade"
-    else
-        jenkins_job_name="puppet"
-    fi
 
 
     $ORIG/virtualizor.py ${ctdir}/${platform} ${virthost} --prefix ${PREFIX} --public_network nat ${virtualizor_extra_args}
@@ -310,10 +305,8 @@ deploy() {
         done"
 
     kill ${tail_job}
-    if [ $do_upgrade -eq 0 ]; then
-        if ! [ -z ${socks+x} ]; then
-            create_socks ${routerip}
-        fi
+    if ! [ -z ${socks+x} ]; then
+        create_socks ${routerip}
     fi
 
     if [ "${tempest}x" == "Truex" ]; then
