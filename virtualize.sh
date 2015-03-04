@@ -104,12 +104,6 @@ LOG_DIR=${LOG_DIR:-"$(pwd)/logs"}
 
 SSHOPTS="-oBatchMode=yes -oCheckHostIP=no -oHashKnownHosts=no  -oStrictHostKeyChecking=no -oPreferredAuthentications=publickey  -oChallengeResponseAuthentication=no -oKbdInteractiveDevices=no -oUserKnownHostsFile=/dev/null -oControlPath=~/.ssh/control-%r@%h:%p -oControlMaster=auto -oControlPersist=30"
 
-if [ -n "${SSH_AUTH_SOCK}" ]; then
-    ssh-add -L > pubfile
-    pubfile=pubfile
-else
-    pubfile=~/.ssh/id_rsa.pub
-fi
 
 do_upgrade=0
 IFS=","

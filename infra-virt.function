@@ -204,7 +204,8 @@ deploy() {
         jenkins_job_name="puppet"
     fi
 
-    $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat --pub-key-file ${pubfile} ${virtualizor_extra_args}
+
+    $ORIG/virtualizor.py "${platform}" ${virthost} --prefix ${PREFIX} --public_network nat ${virtualizor_extra_args}
     rm ${tmp_ssh_pub_key}
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
