@@ -19,9 +19,11 @@
 
 set -ue
 
-ORIG=$(cd $(dirname $0); pwd)
-PREFIX=$USER
-installserver_name="os-ci-test4"
+
+ORIG=$(cd $(dirname $0)/..; pwd)
+PREFIX=${PREFIX:-${USER}}
+installserver_name=${installserver_name:-"os-ci-test4"}
+
 router_name="router"
 routerip=""
 installserverip=""

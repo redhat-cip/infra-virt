@@ -13,9 +13,10 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-
 set -x
-source ../common/infra-virt.function
+
+PREFIX="I12_I13_upgrade"
+source common/infra-virt.function
 
 drop_hosts os-ci-test10 os-ci-test11 os-ci-test12 os-ci-test4 router
 
