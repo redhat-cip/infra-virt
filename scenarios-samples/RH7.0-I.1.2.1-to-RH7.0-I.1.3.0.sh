@@ -21,6 +21,5 @@ drop_hosts os-ci-test10 os-ci-test11 os-ci-test12 os-ci-test4 router
 
 deploy ~/data/sps-snippets/RH7.0-I.1.2.1
 snapshot_create RH7.0-I.1.2.1
-snapshot_restore RH7.0-I.1.2.1
 upgrade_to ~/data/sps-snippets/RH7.0-I.1.3.0
 snapshot_create RH7.0-I.1.3.0

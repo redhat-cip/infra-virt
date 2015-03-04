@@ -133,6 +133,7 @@ snapshot_create() {
     for id in 10 11 12; do
         sudo virsh snapshot-create-as ${PREFIX}_os-ci-test${id} ${name}
     done
+    snapshot_restore ${name}
 }
 
 snapshot_restore() {
