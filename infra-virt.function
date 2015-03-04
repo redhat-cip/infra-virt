@@ -100,20 +100,24 @@ get_mac() {
     echo ${mac}
 }
 
-drop_host() {
-    local host=$1
+drop_hosts() {
+    local hosts=$*
 
-    ssh $SSHOPTS root@$virthost virsh destroy ${host}
-    for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name ${host}); do
-        ssh $SSHOPTS root@$virthost virsh snapshot-delete ${host} ${snapshot}
+    for host in $hosts; do
+	ssh $SSHOPTS root@$virthost virsh domid ${PREFIX}_${host} || continue
+        ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_${host}
+        for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name ${PREFIX}_${host}); do
+            ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_${host} ${snapshot}
+        done
+        ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${PREFIX}_${host}
     done
-    ssh $SSHOPTS root@$virthost virsh undefine --remove-all-storage ${host}
 }
 
 upgrade_to() {
     local ctdir=$1
     shift
 
+    drop_hosts ${installserver_name} router
     deploy ${ctdir} 1
 }
 
