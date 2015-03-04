@@ -32,7 +32,7 @@ arguments:
     -H|--hypervisor=name          Set the hypervisor hostname, default (${virthost})
     -d|--debug                    Set the debug mode for this script, default: disabled
     -w|--wordkir=dir1,dir2,...    Workdir List, default: None
-    -v|--virt=virt_platform.yml   Set the path to the infra's yaml, default: virt_platform.yaml
+    -v|--virt=virt_platform.yml   Set the path to the infra's yaml, default: (${platform})
     -e|--extra='--replace'        Add extra parameters to virtulizor.py
     -p|--prefix                   Change the platform's prefix, default: unix user
     -s|--socks                    Create a socks server to test your platform
