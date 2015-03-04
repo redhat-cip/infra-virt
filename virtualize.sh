@@ -17,7 +17,7 @@
 # under the License.
 
 
-source infra-virt.function
+source common/infra-virt.function
 
 ### Arguments parsing
 

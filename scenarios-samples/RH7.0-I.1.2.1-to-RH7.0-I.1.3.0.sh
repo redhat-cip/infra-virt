@@ -15,7 +15,7 @@
 # under the License.
 
 set -x
-source ../infra-virt.function
+source ../common/infra-virt.function
 
 drop_hosts os-ci-test10 os-ci-test11 os-ci-test12 os-ci-test4 router
 
