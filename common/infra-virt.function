@@ -159,6 +159,18 @@ snapshot_restore() {
 
 }
 
+snapshot_exists() {
+    local name=$1
+
+    for id in 10 11 12; do
+        if ! sudo virsh snapshot-info --snapshotname ${name} ${PREFIX}_os-ci-test${id}; then
+           return 1
+        fi
+    done
+
+    return 0
+}
+
 deploy() {
     local ctdir=$1
     shift
