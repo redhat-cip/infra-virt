@@ -48,7 +48,7 @@ upload_logs() {
     source ~/openrc
     BUILD_PLATFORM=${BUILD_PLATFORM:-"unknown_platform"}
     CONTAINER=${CONTAINER:-"unknown_platform"}
-    for path in /var/lib/edeploy/logs /var/log  /var/lib/jenkins/jobs/puppet/workspace; do
+    for path in /var/lib/edeploy/logs /var/log  /var/lib/jenkins/jobs/puppet/workspace /var/lib/jenkins/jobs/builds/1; do
         mkdir -p ${LOG_DIR}/$(dirname ${path})
         scp ${SSHOPTS} -r root@${installserverip}:${path} ${LOG_DIR}/${path}
     done
