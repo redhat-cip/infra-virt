@@ -37,7 +37,22 @@ sudo systemctl stop firewalld
 sudo systemctl start iptables
 ```
 
-### Collector
+### User account
+
+At this point, you must create the user on the Hypervisor this way:
+
+* sudo with no password. e.g: `joe     ALL=(ALL)       NOPASSWD: ALL`
+* ssh-key with no password `ssh-keygen`
+* ssh-key registred in the /root/.ssh/authorized_keys file
+
+You must be able to run the following command with no password:
+
+```sh
+$ ssh root@localhost uname
+$ sudo uname
+```
+
+## Collector
 
 ```sh
 $ ./collector.py --help
