@@ -100,7 +100,7 @@ snapshot_create() {
     # TODO(Gonéri): use /etc/config-tools/config to know the hosts
     for id in 10 11 12; do
         sleep 5
-	sudo virsh destroy --graceful ${PREFIX}_os-ci-test${id}
+        sudo virsh destroy --graceful ${PREFIX}_os-ci-test${id}
     done
 
     for id in 10 11 12; do
