@@ -16,7 +16,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-
+ORIG=$(cd $(dirname $0); pwd)
 source common/infra-virt.function
 
 ### virtualize.sh specific functions
