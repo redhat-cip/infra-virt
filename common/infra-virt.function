@@ -100,11 +100,11 @@ snapshot_create() {
     # TODO(Gonéri): use /etc/config-tools/config to know the hosts
     for id in 10 11 12; do
         sleep 5
-        sudo virsh destroy --graceful ${PREFIX}_os-ci-test${id}
+        ssh $SSHOPTS root@${virthost} destroy --graceful ${PREFIX}_os-ci-test${id}
     done
 
     for id in 10 11 12; do
-        sudo virsh snapshot-create-as ${PREFIX}_os-ci-test${id} ${name}
+        ssh $SSHOPTS root@${virthost} snapshot-create-as ${PREFIX}_os-ci-test${id} ${name}
     done
     snapshot_restore ${name}
 }
@@ -116,7 +116,7 @@ snapshot_restore() {
     installserverip=$(get_ip ${mac})
 
     for id in 12 11 10; do
-        sudo virsh snapshot-revert "${PREFIX}_os-ci-test${id}" ${name} --running --force
+        ssh $SSHOPTS root@${virthost} snapshot-revert "${PREFIX}_os-ci-test${id}" ${name} --running --force
     done
 
 
@@ -163,7 +163,7 @@ snapshot_exists() {
     local name=$1
 
     for id in 10 11 12; do
-        if ! sudo virsh snapshot-info --snapshotname ${name} ${PREFIX}_os-ci-test${id}; then
+        if ! ssh $SSHOPTS root@${virthost} snapshot-info --snapshotname ${name} ${PREFIX}_os-ci-test${id}; then
            return 1
         fi
     done
