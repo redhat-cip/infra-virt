@@ -18,13 +18,15 @@ set -x
 PREFIX="I12_I13_upgrade"
 source common/infra-virt.function
 
-drop_hosts os-ci-test10 os-ci-test11 os-ci-test12 os-ci-test4 router
+if snapshot_exists RH7.0-I.1.2.1; then
+    snapshot_restore RH7.0-I.1.2.1
+else
+    drop_hosts os-ci-test4 router os-ci-test10 os-ci-test11 os-ci-test12
+    deploy ~/data/sps-snippets/RH7.0-I.1.2.1
+    call_jenkins_job "puppet"
+    snapshot_create RH7.0-I.1.2.1
+fi
 
-deploy ~/data/sps-snippets/RH7.0-I.1.2.1
-call_jenkins_job "puppet"
-snapshot_create RH7.0-I.1.2.1
-
+drop_hosts os-ci-test4 router
 deploy ~/data/sps-snippets/RH7.0-I.1.3.0
-call_jenkins_job "puppet"
-snapshot_create RH7.0-I.1.3.0
-call_jenkins_job "sanity"
+call_jenkins_job "upgrade"
