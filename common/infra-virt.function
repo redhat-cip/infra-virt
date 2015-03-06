@@ -158,6 +158,19 @@ snapshot_restore() {
     done
 "
 
+    ssh $SSHOPTS root@$installserverip "
+        set -eux
+
+        while true; do
+            sleep 1
+            for id in 12 11 10; do
+                ssh $SSHOPTS root@os-ci-test\${id} systemctl status mongod.service|grep 'Active: active' && continue
+                ssh $SSHOPTS root@os-ci-test\${id} systemctl start mongod.service || continue 2
+            done
+            break
+        done"
+
+
 }
 
 snapshot_exists() {
