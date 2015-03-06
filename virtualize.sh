@@ -17,7 +17,7 @@
 # under the License.
 
 ORIG=$(cd $(dirname $0); pwd)
-source common/infra-virt.function
+source ${ORIG}/common/infra-virt.function
 
 ### virtualize.sh specific functions
 
