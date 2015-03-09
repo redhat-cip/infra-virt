@@ -127,8 +127,11 @@ snapshot_restore() {
         set -eux
         while true; do
             sleep 1
-            ssh $SSHOPTS root@os-ci-test12 pkill -e -9 mysqld || continue
-            ssh $SSHOPTS root@os-ci-test12 /etc/init.d/mysql-bootstrap bootstrap || continue
+            # Wait for the server to be ready
+            ssh $SSHOPTS root@os-ci-test12 uname || continue
+
+            ssh $SSHOPTS root@os-ci-test12 pkill -e -9 mysqld || true
+            ssh $SSHOPTS root@os-ci-test12 /etc/init.d/mysql-bootstrap bootstrap || true
             break
         done"
 
