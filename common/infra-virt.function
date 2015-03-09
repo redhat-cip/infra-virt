@@ -77,7 +77,7 @@ drop_hosts() {
     local hosts=$*
 
     for host in $hosts; do
-	ssh $SSHOPTS root@$virthost virsh domid ${PREFIX}_${host} || continue
+        ssh $SSHOPTS root@$virthost virsh domid ${PREFIX}_${host} || continue
         ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_${host}
         for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name ${PREFIX}_${host}); do
             ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_${host} ${snapshot}
@@ -138,17 +138,17 @@ snapshot_restore() {
         done
         while true; do
             for id in 10 11 12; do
-            (
-            set -eux
-            ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions && exit 0
-            ssh $SSHOPTS root@os-ci-test\${id} service rabbitmq-server start
-            exit 0
-            )&
-        done
-        wait
-        for id in 10 11 12; do
-            ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions || continue 2
-        done
+                (
+                set -eux
+                ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions && exit 0
+                ssh $SSHOPTS root@os-ci-test\${id} service rabbitmq-server start
+                exit 0
+                )&
+            done
+            wait
+            for id in 10 11 12; do
+                ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions || continue 2
+            done
         break
     done
     for id in 10 11 12; do
@@ -178,7 +178,7 @@ snapshot_exists() {
 
     for id in 10 11 12; do
         if ! ssh $SSHOPTS root@${virthost} virsh snapshot-info --snapshotname ${name} ${PREFIX}_os-ci-test${id}; then
-           return 1
+            return 1
         fi
     done
 
