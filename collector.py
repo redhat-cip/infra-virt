@@ -50,17 +50,24 @@ def _get_router_nic(config_path):
     cmdb_files = [os.path.splitext(os.path.basename(cmdb_file))[0]
                   for cmdb_file in cmdb_files]
 
+    gateway, netmask = None, None
     for cmdb_file in cmdb_files:
         loaded_cmdb = cmdb.load_cmdb("%s/edeploy/" % config_path, cmdb_file)
         for host in loaded_cmdb:
             if "gateway" in host and "netmask" in host:
-                net = netaddr.IPNetwork("%s/%s" % (host["gateway"],
-                                                   host["netmask"])).network
+                gateway, netmask = host["gateway"], host["netmask"]
+            elif "gateway-admin" in host and "netmask-admin" in host:
+                gateway, netmask = host["gateway-admin"], host["netmask-admin"]
 
-                return {"ip": host["gateway"],
+            if gateway and netmask:
+                net = netaddr.IPNetwork("%s/%s" % (gateway, netmask)).network
+                return {"ip": gateway,
                         "name": "eth0",
-                        "netmask": host["netmask"],
+                        "netmask": netmask,
                         "network": str(net)}
+
+    print("Gateway not available.")
+    sys.exit(1)
 
 
 def _get_checksum(images_url, sps_version, img):
