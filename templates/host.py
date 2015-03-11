@@ -31,6 +31,8 @@ HOST = """
     <virtualizor:instance
      xmlns:virtualizor="http://virtualizor/instance">
       <virtualizor:profile>{{ profile }}</virtualizor:profile>
+      <virtualizor:prefix>{{ prefix }}</virtualizor:prefix>
+      <virtualizor:hostname>{{ hostname }}</virtualizor:hostname>
     </virtualizor:instance>
   </metadata>
   <sysinfo type='smbios'>
