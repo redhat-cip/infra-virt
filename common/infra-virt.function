@@ -22,9 +22,7 @@
 set -ue
 
 PREFIX=${PREFIX:-${USER}}
-installserver_name=${installserver_name:-"os-ci-test4"}
 
-router_name="router"
 routerip=""
 installserverip=""
 virthost="localhost"
@@ -92,6 +90,7 @@ upgrade_to() {
     local ctdir=$1
     shift
 
+    local installserver_name=$(find_host_by_profile 'install-server')
     drop_hosts ${installserver_name} router
     deploy ${ctdir}
     call_jenkins_job "upgrade"
@@ -115,6 +114,7 @@ snapshot_create() {
 snapshot_restore() {
     local name=$1
 
+    local installserver_name=$(find_host_by_profile 'install-server')
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
 
@@ -187,6 +187,25 @@ snapshot_exists() {
     return 0
 }
 
+find_host_by_profile() {
+    local profile=$1
+    for name in $(ssh ${SSHOPTS} root@${virthost} virsh list --all --name); do
+        local vm_prefix=$(get_key_from_domain_metadata ${name} prefix)
+
+        if [[ $vm_prefix != $PREFIX ]]; then
+            continue
+        fi
+
+        local vm_profile=$(get_key_from_domain_metadata ${name} profile)
+        if [[ $vm_profile != ${profile} ]]; then
+            continue
+        fi
+
+        echo $(get_key_from_domain_metadata ${name} hostname)
+        break
+    done
+}
+
 deploy() {
     local ctdir=$1
     shift
@@ -211,10 +230,10 @@ deploy() {
 
     $ORIG/virtualizor.py ${ctdir}/${platform} ${virthost} --prefix ${PREFIX} --public_network nat ${virtualizor_extra_args}
     rm ${tmp_ssh_pub_key}
+
+    local installserver_name=$(find_host_by_profile 'install-server')
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
-    local mac=$(get_mac ${router_name})
-    routerip=$(get_ip ${mac})
 
     local retry=0
     while ! rsync -e "ssh $SSHOPTS" --quiet -av --no-owner --no-group ${ctdir}/top/ root@$installserverip:/; do
@@ -283,6 +302,7 @@ call_jenkins_job() {
     # e.g: puppet, upgrade, sanity
     local jenkins_job_name=$1
 
+    local installserver_name=$(find_host_by_profile 'install-server')
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
 
@@ -311,14 +331,18 @@ call_jenkins_job() {
 
     kill ${tail_job}
     if ! [ -z ${socks+x} ]; then
-        create_socks ${routerip}
+        create_socks
     fi
 
 }
 
 create_socks() {
     local port=1080
-    routerip=$1
+
+    local router_name=$(find_host_by_profile 'router')
+    local mac=$(get_mac ${router_name})
+    local routerip=$(get_ip ${mac})
+
     portlist=$(ssh ${SSHOPTS} root@${virthost} netstat -lntp | awk '{print $4}' | awk -F':' '{print $NF}' | grep 108.)
     while [ "${portlist}x" != "x" ] ; do
         if [ $(echo ${portlist} | grep ${port} | wc -l) -eq 1 ]; then
@@ -332,4 +356,11 @@ create_socks() {
     done
     ssh -f -N -D 0.0.0.0:${port} ${routerip}
     echo "Port ${port} for the server socks"
+}
+
+get_key_from_domain_metadata() {
+    local name=$1
+    local key=$2
+    value=$(ssh ${SSHOPTS} root@${virthost} virsh metadata ${name} http://virtualizor/instance 2>/dev/null|xmllint --xpath "string(/instance/${key})" - 2>/dev/null)
+    echo ${value}
 }

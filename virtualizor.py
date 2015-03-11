@@ -210,11 +210,14 @@ class Host(object):
                      'emulator': self.hypervisor.emulator,
                      'memory': 8 * 1024 ** 2,
                      'ncpus': 2,
-                     'cpus': [], 'disks': [], 'nics': []}
+                     'cpus': [],
+                     'disks': [],
+                     'nics': [],
+                     'prefix': conf.prefix}
         self.disk_cpt = 0
 
         for k in ('uuid', 'serial', 'product_name',
-                  'memory', 'ncpus'):
+                  'memory', 'ncpus', 'profile'):
             if k not in host_definition:
                 continue
             self.meta[k] = host_definition[k]

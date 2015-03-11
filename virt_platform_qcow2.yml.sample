@@ -71,6 +71,7 @@ hosts:
       network_name: __public_network__
     profile: install-server
   router:
+    profile: router
     disks:
     - image: install-server-D7-I.1.3.0.img.qcow2
       size: 15Gi

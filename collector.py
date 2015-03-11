@@ -114,6 +114,8 @@ def collect(config_path, qcow, sps_version, images_url):
     img = "%s-%s.img.qcow2" % ("install-server", sps_version)
     virt_platform["hosts"]["router"]["disks"] = [{'size': '15Gi',
                                                   'image': img}]
+    virt_platform["hosts"]["router"]["profile"] = 'router'
+
     # adds image checksum to the router
     checksum = _get_checksum(images_url, sps_version, img)
     images_checksums[img] = checksum
