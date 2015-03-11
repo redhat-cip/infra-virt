@@ -214,7 +214,7 @@ class Host(object):
         self.disk_cpt = 0
 
         for k in ('uuid', 'serial', 'product_name',
-                  'memory', 'ncpus'):
+                  'memory', 'ncpus', 'profile'):
             if k not in host_definition:
                 continue
             self.meta[k] = host_definition[k]
