@@ -53,7 +53,7 @@ debug() {
 
 ### Arguments parsing
 
-ARGS=$(getopt -o w:v:ste:p:dH:h -l "wordkir:,virt:,socks,tempest,extra:,platform,debug,hypervisor:,help" -- "$@");
+ARGS=$(getopt -o w:v:ste:p:dH:h -l "wordkir:,virt:,socks,tempest,extra:,platform,debug,hypervisor:,help,prefix:" -- "$@");
 #Bad arguments
 if [ $? -ne 0 ]; then
     usage
