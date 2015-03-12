@@ -145,33 +145,31 @@ snapshot_restore() {
             break
         done"
 
+    # NOTE(Gonéri): time to time, the RabbitMQ cluster won't start at the first try.
+    # So we retry three time in a row.
     ssh $SSHOPTS root@$installserverip "
-        set -eux
-        for id in 10 11 12; do
-            # TODO(Gonéri): Is that really needed?
-            ssh $SSHOPTS root@os-ci-test\${id} killall epmd || true
-        done
-        while true; do
+        for ((x = 0 ; x <= 3 ; x++)); do
             for id in 10 11 12; do
+                ssh $SSHOPTS root@os-ci-test\${id} service rabbitmq-server stop
+            done
+            for ((y = 0 ; y <= 20 ; y++)); do
+                for id in 10 11 12; do
                 (
-                set -eux
-                ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions && exit 0
-                ssh $SSHOPTS root@os-ci-test\${id} service rabbitmq-server start
-                exit 0
+                    set -eux
+                    sleep 1
+                    ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions && exit 0
+                    ssh $SSHOPTS root@os-ci-test\${id} service rabbitmq-server start
+                    exit 0
                 )&
+                done
+                wait
+                for id in 10 11 12; do
+                    ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions || continue 2
+                done
+                exit 0
             done
-            wait
-            for id in 10 11 12; do
-                ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl list_permissions || continue 2
-            done
-        break
-    done
-    for id in 10 11 12; do
-        echo \"HOST \${id}\"
-        ssh $SSHOPTS root@os-ci-test\${id} galera-status
-        ssh $SSHOPTS root@os-ci-test\${id} rabbitmqctl cluster_status
-    done
-"
+        done
+        exit 1"
 
     ssh $SSHOPTS root@$installserverip "
         set -eux
