@@ -131,7 +131,17 @@ snapshot_restore() {
             ssh $SSHOPTS root@os-ci-test12 uname || continue
 
             ssh $SSHOPTS root@os-ci-test12 pkill -e -9 mysqld || true
-            ssh $SSHOPTS root@os-ci-test12 /etc/init.d/mysql-bootstrap bootstrap || true
+            ssh $SSHOPTS root@os-ci-test12 '
+                if [ -f /usr/lib/systemd/system/mysqld.service ]; then
+                    sed \"s,mysqld_safe --basedir,mysqld_safe --wsrep-new-cluster --basedir,\" /usr/lib/systemd/system/mysqld.service > /etc/systemd/system/mysqld.service
+                    systemctl daemon-reload
+                    systemctl start mysqld
+                    rm /etc/systemd/system/mysqld.service
+                    systemctl daemon-reload
+                else
+                    /etc/init.d/mysql-bootstrap bootstrap
+                fi
+                '
             break
         done"
 
