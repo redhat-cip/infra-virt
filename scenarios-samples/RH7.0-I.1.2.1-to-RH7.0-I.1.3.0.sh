@@ -15,21 +15,18 @@
 # under the License.
 set -x
 
-PREFIX="I12_I13_upgrade"
+PREFIX="I12_I13"
 source common/infra-virt.function
 
 if snapshot_exists RH7.0-I.1.2.1; then
     snapshot_restore RH7.0-I.1.2.1
 else
     drop_hosts os-ci-test4 router os-ci-test10 os-ci-test11 os-ci-test12
-    deploy ~/data/sps-snippets/RH7.0-I.1.2.1
+    deploy ~/data/sps-snippets/RH7.0-I.1.2.1-qcow
     call_jenkins_job "puppet"
     snapshot_create RH7.0-I.1.2.1
 fi
 
 drop_hosts os-ci-test4 router
-# TODO(Gonéri): Hack to disable the test on /var/run/swift group ownership
-# https://bugs.launchpad.net/puppet-openstack-cloud/+bug/1429091
-sed -i 's,/var/run/swift,/var/lib/swift,' ~/data/sps-snippets/RH7.0-I.1.3.0/top/etc/serverspec/spec/tests/swiftbase/swiftbase_spec.rb
-deploy ~/data/sps-snippets/RH7.0-I.1.3.0
+deploy ~/data/sps-snippets/RH7.0-I.1.3-qcow
 call_jenkins_job "upgrade"
