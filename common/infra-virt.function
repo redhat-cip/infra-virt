@@ -78,7 +78,7 @@ drop_hosts() {
 
     for host in $hosts; do
         ssh $SSHOPTS root@$virthost virsh domid ${PREFIX}_${host} || continue
-        ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_${host}
+        ssh $SSHOPTS root@$virthost virsh destroy ${PREFIX}_${host} || true
         for snapshot in $(ssh $SSHOPTS root@$virthost virsh snapshot-list --name ${PREFIX}_${host}); do
             ssh $SSHOPTS root@$virthost virsh snapshot-delete ${PREFIX}_${host} ${snapshot}
         done
