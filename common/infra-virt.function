@@ -303,6 +303,9 @@ deploy() {
             ssh ${SSHOPTS} root@\${node} \"echo 'RSERV_PORT=873' >> /var/lib/edeploy/conf\"
             ssh ${SSHOPTS} root@\${node} \"echo 'Defaults:jenkins !requiretty' > /etc/sudoers.d/999-jenkins-cloud-init-requiretty\"
             ssh ${SSHOPTS} root@\${node} \"echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/999-jenkins-cloud-init-requiretty\"
+            # NOTE(Gonéri): Drop existing puppet certificat to be sure the node will request a
+            # new certificat.
+            ssh ${SSHOPTS} root@\${node} \"rm -rf /var/lib/puppet/ssl\"
         done
         break
     done
