@@ -62,7 +62,7 @@ def canonical_size(size):
 
 def get_conf(argv=sys.argv):
     def check_prefix(value):
-        if not re.match('^[_a-zA-Z\d]+$', value):
+        if not re.match('^[\._a-zA-Z\d]+$', value):
             sys.stderr.write("Invalid value for --prefix parameter\n")
             sys.exit(1)
         return value
