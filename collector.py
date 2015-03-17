@@ -111,14 +111,14 @@ def collect(config_path, qcow, sps_version, images_url):
 
     # adds router
     virt_platform["hosts"]["router"] = {}
-    img = "%s-%s.img.qcow2" % ("install-server", sps_version)
+    img_name = "%s-%s.img.qcow2" % ("install-server", sps_version)
     virt_platform["hosts"]["router"]["disks"] = [{'size': '15Gi',
-                                                  'image': img}]
+                                                  'image': img_name}]
     virt_platform["hosts"]["router"]["profile"] = 'router'
 
     # adds image checksum to the router
-    checksum = _get_checksum(images_url, sps_version, img)
-    images_checksums[img] = checksum
+    checksum = _get_checksum(images_url, sps_version, img_name)
+    images_checksums[img_name] = checksum
     if checksum:
         virt_platform["hosts"]["router"]["disks"][0]['checksum'] = checksum
 
@@ -131,21 +131,22 @@ def collect(config_path, qcow, sps_version, images_url):
     for hostname in global_conf["hosts"]:
         # construct the host virtual configuration
         virt_platform["hosts"][hostname] = state_obj.hardware_info(hostname)
-        img = "%s-%s.img.qcow2" % (global_conf["hosts"][hostname]["profile"],
-                                   sps_version)
+        profile = global_conf["hosts"][hostname]["profile"]
+        edeploy_role = global_conf["profiles"][profile]["edeploy"]
+        img_name = "%s-%s.img.qcow2" % (edeploy_role, sps_version)
 
-        if img not in images_checksums:
-            checksum = _get_checksum(images_url, sps_version, img)
-            images_checksums[img] = checksum
+        if img_name not in images_checksums:
+            checksum = _get_checksum(images_url, sps_version, img_name)
+            images_checksums[img_name] = checksum
 
         if qcow or \
            global_conf["hosts"][hostname]["profile"] == "install-server":
             if 'disks' not in virt_platform["hosts"][hostname]:
                 virt_platform["hosts"][hostname]["disks"] = [{'size': '40Gi'}]
-            virt_platform["hosts"][hostname]["disks"][0]['image'] = img
-            if images_checksums.get(img):
+            virt_platform["hosts"][hostname]["disks"][0]['image'] = img_name
+            if images_checksums.get(img_name):
                 virt_platform["hosts"][hostname]["disks"][0]['checksum'] = \
-                    images_checksums.get(img)
+                    images_checksums.get(img_name)
 
         # add the profile
         virt_platform["hosts"][hostname]["profile"] = \
