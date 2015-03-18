@@ -26,6 +26,7 @@ import os
 import sys
 
 import requests
+import six
 import yaml
 
 _VERSION = "0.0.1"
@@ -70,6 +71,39 @@ def _get_router_nic(config_path):
     sys.exit(1)
 
 
+def _get_files(config_path):
+    cmdb_files = glob.glob("%s/edeploy/*.cmdb" % config_path)
+    cmdb_files = [os.path.splitext(os.path.basename(cmdb_file))[0]
+                  for cmdb_file in cmdb_files]
+
+    files = {}
+    for cmdb_file in cmdb_files:
+        loaded_cmdb = cmdb.load_cmdb("%s/edeploy/" % config_path, cmdb_file)
+        configure_file = "%s/edeploy/%s.configure" % (config_path, cmdb_file)
+        configure_file_content = ""
+        try:
+            configure_file_content = open(configure_file, 'r').read()
+        except IOError:
+            return {}
+
+        for host in loaded_cmdb:
+            import re
+            files[host['hostname']] = []
+            for line in re.findall(r'(config\([\s\S\n]*?)\)\n',
+                                   configure_file_content, re.MULTILINE):
+                m = re.match(r"config\([\"'](.+?)[\"'].*write\(([\S\s]*''')",
+                             line, re.MULTILINE)
+                file_path = m.group(1)
+                # For the moment, we only use collect the network configuration
+                if not file_path.startswith("/etc/sysconfig"):
+                    continue
+                files[host['hostname']].append({
+                    'path': file_path,
+                    'content': eval("%s %% %s" % (m.group(2), str(host)))
+                })
+    return files
+
+
 def _get_checksum(images_url, sps_version, img):
 
     if not images_url:
@@ -90,7 +124,7 @@ def _get_checksum(images_url, sps_version, img):
     return resp.text.split(" ")[0].encode("utf8")
 
 
-def collect(config_path, qcow, sps_version, images_url):
+def collect(config_path, qcow, sps_version, images_url, parse_configure_files):
     # check config directory path
     if not os.path.exists(config_path):
         print("Error: --config-dir='%s' does not exist." % config_path)
@@ -177,6 +211,13 @@ def collect(config_path, qcow, sps_version, images_url):
     if images_url:
         virt_platform["images-url"] = "%s/%s" % (images_url, sps_version)
 
+    if parse_configure_files:
+        for hostname, data in six.iteritems(_get_files(config_path)):
+            try:
+                virt_platform["hosts"][hostname]['files'] = data
+            except KeyError:
+                print("Skip node %s" % hostname)
+
     return virt_platform
 
 
@@ -212,6 +253,11 @@ def main():
                             default=False,
                             action="store_true",
                             help='Boot on qcow image.')
+    cli_parser.add_argument('--parse-configure-files',
+                            required=False,
+                            default=False,
+                            action="store_true",
+                            help='Enable experimental .configure file parsing.')
     cli_parser.add_argument('--images-url',
                             required=False,
                             help='Url of the qcow images.')
@@ -219,8 +265,8 @@ def main():
     cli_arguments = cli_parser.parse_args()
 
     virt_platform = collect(cli_arguments.config_dir, cli_arguments.qcow,
-                            cli_arguments.sps_version,
-                            cli_arguments.images_url)
+                            cli_arguments.sps_version, cli_arguments.images_url,
+                            cli_arguments.parse_configure_files)
 
     save_virt_platform(virt_platform,
                        cli_arguments.output_dir)
