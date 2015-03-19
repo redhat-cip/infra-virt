@@ -202,6 +202,7 @@ class Host(object):
         self.hypervisor = hypervisor
         self.conf = conf
         self.hostname = host_definition['hostname']
+        self.files = host_definition.get('files', [])
         self.hostname_with_prefix = host_definition['hostname_with_prefix']
 
         self.meta = {'hostname': host_definition['hostname'],
@@ -329,6 +330,7 @@ jenkins ALL=(ALL) NOPASSWD:ALL
                     '/sbin/iptables -t nat -A POSTROUTING -o ' +
                     nic['name'] +
                     ' -j MASQUERADE')
+        user_data['write_files'] += self.files
         contents = {
             'user-data': "#cloud-config\n" + yaml.dump(user_data),
             'meta-data': env.from_string(host_template.META_DATA).render({
@@ -437,6 +439,10 @@ def load_infra_description(input_file):
         for n in definition["nics"]:
             n.setdefault('mac', random_mac())
             n.setdefault('name', 'eth%d' % i)
+            # NOTE(Gonéri): hardware can return mac == none when the MAC is not
+            # defined.
+            if n['mac'] == 'none':
+                n['mac'] = random_mac()
             i += 1
     return infra_description
 
