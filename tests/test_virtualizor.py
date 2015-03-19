@@ -22,7 +22,10 @@ libvirt_conn = mock.Mock()
 libvirt_conn.listAllNetworks.return_value = [
     mock.Mock(**{'name.return_value': 'default_sps'})]
 libvirt_conn.listAllDomains.return_value = [
-    mock.Mock(**{'name.return_value': 'default_os-ci-test11'})]
+    mock.Mock(**{
+        'name.return_value': 'default_os-ci-test11',
+        'metadata.return_value': '<domain><prefix>bob</prefix></domain>'
+    })]
 libvirt_conn.lookupByName.return_value = mock.Mock(**{
     'info.return_value': [1], 'create.return_value': True})
 libvirt_conn.networkLookupByName.return_value = mock.Mock(**{
@@ -39,6 +42,8 @@ class FakeLibvirt(object):
     VIR_DOMAIN_SHUTOFF = 5
     VIR_DOMAIN_CRASHED = 6
     VIR_DOMAIN_PMSUSPENDED = 7
+    VIR_DOMAIN_METADATA_ELEMENT = 2
+    VIR_DOMAIN_AFFECT_CONFIG = 1
 
     def open(a, b):
         return libvirt_conn
@@ -72,14 +77,14 @@ class TestVirtualizor(testtools.TestCase):
         self.virtualizor.main(['virt_platform_qcow2.yml.sample', 'bar',
                                '--pub-key-file',
                                'virt_platform_qcow2.yml.sample'])
-        self.assertEqual(sub_call.call_count, 39)
+        self.assertEqual(sub_call.call_count, 50)
         self.assertEqual(libvirt_conn.networkCreateXML.call_count, 1)
-        self.assertEqual(libvirt_conn.defineXML.call_count, 4)
+        self.assertEqual(libvirt_conn.defineXML.call_count, 5)
 
     @mock.patch('virtualizor.subprocess.call')
     @mock.patch('virtualizor.Hypervisor.call', return_value=0)
     def test_main_with_replace(self, sub_call, hyp_call):
-        self.virtualizor.main(['--replace', 'virt_platform_qcow2.yml.sample',
+        self.virtualizor.main(['--cleanup', 'virt_platform_qcow2.yml.sample',
                                'bar', '--pub-key-file',
                                'virt_platform_qcow2.yml.sample'])
         self.assertEqual(sub_call.call_count, 50)
