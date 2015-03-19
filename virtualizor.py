@@ -367,12 +367,22 @@ def purge_existing_domains(hypervisor, prefix):
     logging.info("Cleaning the %s prefix up on the hypervisor" % prefix)
     existing_domains = [d for d in hypervisor.conn.listAllDomains()]
     for dom in existing_domains:
-        metadata = dom.metadata(
-            libvirt.VIR_DOMAIN_METADATA_ELEMENT,
-            'http://virtualizor/instance',
-            flags=libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        try:
+            metadata = dom.metadata(
+                libvirt.VIR_DOMAIN_METADATA_ELEMENT,
+                'http://virtualizor/instance',
+                flags=libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        except libvirt.libvirtError as e:
+            if e.message == ('metadata not found: Requested '
+                             'metadata element is not present'):
+                continue
+            else:
+                raise(e)
         root = ET.fromstring(metadata)
-        dom_prefix = root.find('prefix').text
+        try:
+            dom_prefix = root.find('prefix').text
+        except AttributeError:
+            continue
         if prefix == dom_prefix:
             logging.debug("purging domain %s" % dom.name())
             if dom.info()[0] in [libvirt.VIR_DOMAIN_RUNNING,
