@@ -34,7 +34,7 @@ class TestCollector(unittest.TestCase):
         m_requests.get.return_value = m_checksum
         m_checksum.text = "test_checksum test_image"
         virt_platform = collector.collect(_CONFIG_PATH, False, "sps_version",
-                                          "image_url")
+                                          "image_url", "parse_configure_files")
         self.assertTrue("hosts" in virt_platform)
         self.assertEqual(len(virt_platform["hosts"]), 5)
 
