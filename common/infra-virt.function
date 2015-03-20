@@ -287,7 +287,10 @@ deploy() {
         for node in \${HOSTS}; do
             sleep 1
             echo -n .
-            ssh $SSHOPTS jenkins@\${node} uname > /dev/null 2>&1|| continue 2
+            if ! ssh $SSHOPTS jenkins@\${node} uname > /dev/null 2>&1; then
+                echo Failed to contact \${node}
+                continue 2
+            fi
             ssh ${SSHOPTS} jenkins@\${node} '
                 sudo test -s /root/.ssh/authorized_keys || sudo cp ~jenkins/.ssh/authorized_keys /root/.ssh/authorized_keys
             '
