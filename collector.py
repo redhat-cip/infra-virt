@@ -257,7 +257,8 @@ def main():
                             required=False,
                             default=False,
                             action="store_true",
-                            help='Enable experimental .configure file parsing.')
+                            help='Enable experimental .configure file \
+                                  parsing.')
     cli_parser.add_argument('--images-url',
                             required=False,
                             help='Url of the qcow images.')
@@ -265,7 +266,8 @@ def main():
     cli_arguments = cli_parser.parse_args()
 
     virt_platform = collect(cli_arguments.config_dir, cli_arguments.qcow,
-                            cli_arguments.sps_version, cli_arguments.images_url,
+                            cli_arguments.sps_version,
+                            cli_arguments.images_url,
                             cli_arguments.parse_configure_files)
 
     save_virt_platform(virt_platform,
