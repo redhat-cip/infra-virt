@@ -268,14 +268,17 @@ def collect(config_path, qcow, sps_version, images_url, parse_configure_files):
                 network_configuration = "standard"
 
         if network_configuration == "standard":
-            nics[0].update({
-                "name": "eth0",
-                "ip": global_conf["hosts"][hostname]["ip"],
-                "network": str(admin_network.network),
-                "netmask": str(admin_network.netmask)})
+            ip = global_conf["hosts"][hostname]["ip"]
             for netobj, entry in six.iteritems(router_configurations):
-                if str(netobj) == str(admin_network):
-                    nics[0]['gateway'] = entry['ip']
+                if ip in netobj:
+                    first_nic = {
+                        'network': entry['network'],
+                        'netmask': entry['netmask'],
+                        'gateway': entry['ip'],
+                        'ip': ip,
+                    }
+                    nics[0].update(first_nic)
+                    break
         if global_conf["hosts"][hostname]["profile"] == "install-server":
             nics.append({
                 "bootproto": "dhcp",
