@@ -179,9 +179,21 @@ class Hypervisor(object):
 
     def wait_for_lease(self, mac):
         while True:
-            for lease in self.public_net.DHCPLeases():
-                if lease['mac'] == mac:
-                    return lease['ipaddr']
+            if not hasattr(self.public_net, "DHCPLeases"):
+                stdout = subprocess.check_output([
+                    'ssh', 'root@%s' % self._conf.target_host, 'cat',
+                    "/var/lib/libvirt/dnsmasq/%s.leases" %
+                    self._conf.public_network])
+                for line in stdout.split('\n'):
+                    m = re.search("^\S+\s%s\s(\S+)\s" % mac, line)
+                    if m:
+                        return(m.group(1))
+
+            else:
+                for lease in self.public_net.DHCPLeases():
+                    if lease['mac'] == mac:
+                        return lease['ipaddr']
+
             time.sleep(1)
 
     def push(self, source, dest):
