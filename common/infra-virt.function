@@ -323,7 +323,7 @@ call_jenkins_job() {
     local mac=$(get_mac ${installserver_name})
     installserverip=$(get_ip ${mac})
 
-    while curl --silent http://${installserverip}:8282/job/${jenkins_job_name}/build|\
+    while ssh ${SSHOPTS} root@${installserverip} curl --silent http://${installserverip}:8282/job/${jenkins_job_name}/build|\
             grep "Your browser will reload automatically when Jenkins is read"; do
         sleep 1;
     done
