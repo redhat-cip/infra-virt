@@ -279,7 +279,7 @@ class Host(object):
                     'name': 'root',
                     'ssh-authorized-keys': ssh_keys
                 }
-                  ],
+            ],
             'write_files': [
                 {
                     'path': '/etc/resolv.conf',
