@@ -282,6 +282,7 @@ def collect(config_path, qcow, sps_version, images_url, parse_configure_files):
         if global_conf["hosts"][hostname]["profile"] == "install-server":
             nics.append({
                 "bootproto": "dhcp",
+                "gateway": entry['ip'],
                 "network_name": "__public_network__"})
         virt_platform["hosts"][hostname]["nics"] = nics
 
