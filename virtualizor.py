@@ -105,7 +105,10 @@ def get_conf(argv=sys.argv):
 class Hypervisor(object):
     def __init__(self, conf, infra_description):
         self._conf = conf
+        self.private_net = None
+        self.public_net = None
         self._infra_description = infra_description
+        self._vif_seen = []
         self.conn = libvirt.open('qemu+ssh://root@%s/system' %
                                  self._conf.target_host)
         self.emulator = self._find_emulator()
@@ -163,19 +166,20 @@ class Hypervisor(object):
         if not self.public_net.isActive():
             self.public_net.create()
 
-        net_definitions = {"%s_sps" % self._conf.prefix: {}}
-        for netname in net_definitions:
-            exists = netname in existing_networks
-            if exists and self._conf.cleanup:
-                self.conn.networkLookupByName(netname).destroy()
-                logging.info("Cleaning network %s." % netname)
-                exists = False
-            if not exists:
-                logging.info("Creating network %s." % netname)
-                network = Network(netname, net_definitions[netname])
-                self.conn.networkCreateXML(network.dump_libvirt_xml())
+        private_net_name = "%s_sps" % self._conf.prefix
+        exists = private_net_name in existing_networks
+        if exists and self._conf.cleanup:
+            self.conn.networkLookupByName(private_net_name).destroy()
+            logging.info("Cleaning network %s." % private_net_name)
+            exists = False
+        if not exists:
+            logging.info("Creating network %s." % private_net_name)
+            network = Network(private_net_name, {})
+            self.conn.networkCreateXML(network.dump_libvirt_xml())
         self.public_net = self.conn.networkLookupByName(
             self._conf.public_network)
+        self.private_net = self.conn.networkLookupByName(
+            private_net_name)
 
     def wait_for_lease(self, mac):
         while True:
@@ -201,8 +205,22 @@ class Hypervisor(object):
                          'root@%s' % self._conf.target_host + ':' + dest])
 
     def call(self, *kargs):
+        # NOTE(Gonéri): We do this to please execv:
+        # TypeError: execv() arg 2 must contain only strings
+        str_kargs = [str(p) for p in list(kargs)]
         return subprocess.call(['ssh', 'root@%s' % self._conf.target_host] +
-                               list(kargs))
+                               str_kargs)
+
+    def set_mtu_on_br(self, brname, mtu='9000'):
+        brctl_show = subprocess.check_output([
+            'ssh', 'root@%s' % self._conf.target_host,
+            'brctl', 'show', brname])
+        for m in re.finditer(r'((virbr\d+-nic|virbr\d+|vnet\d+))', brctl_show):
+            nic = m.group(0)
+            if nic in self._vif_seen:
+                continue
+            self.call('ip', 'link', 'set', nic, 'mtu', mtu)
+            self._vif_seen.append(nic)
 
     class MissingPublicNetwork(Exception):
         pass
@@ -213,13 +231,14 @@ class Host(object):
     def __init__(self, hypervisor, conf, host_definition):
         self.hypervisor = hypervisor
         self.conf = conf
+        self.dom = None
         self.hostname = host_definition['hostname']
         self.files = host_definition.get('files', [])
-        self.hostname_with_prefix = host_definition['hostname_with_prefix']
+        self.hostname_with_prefix = "%s_%s" % (conf.prefix, self.hostname)
 
         self.meta = {'hostname': host_definition['hostname'],
                      'hostname_with_prefix':
-                         host_definition['hostname_with_prefix'],
+                         self.hostname_with_prefix,
                      'uuid': str(uuid.uuid1()),
                      'emulator': self.hypervisor.emulator,
                      'memory': 8 * 1024 ** 2,
@@ -439,6 +458,13 @@ class Host(object):
     def dump_libvirt_xml(self):
         return self.template.render(self.meta)
 
+    def start(self):
+        self.hypervisor.conn.defineXML(self.dump_libvirt_xml())
+        self.dom = self.hypervisor.conn.lookupByName(self.hostname_with_prefix)
+        self.dom.create()
+        self.hypervisor.set_mtu_on_br(
+            self.hypervisor.private_net.bridgeName(), 9000)
+
 
 class Network(object):
 
@@ -526,13 +552,9 @@ def main(argv=sys.argv[1:]):
 
     for hostname in sorted(hosts):
         host_description = hosts[hostname]
-        hostname_with_prefix = "%s_%s" % (conf.prefix, hostname)
         host_description['hostname'] = hostname
-        host_description['hostname_with_prefix'] = hostname_with_prefix
         host = Host(hypervisor, conf, host_description)
-        hypervisor.conn.defineXML(host.dump_libvirt_xml())
-        dom = hypervisor.conn.lookupByName(hostname_with_prefix)
-        dom.create()
+        host.start()
 
     for hostname, host_description in \
             six.iteritems(infra_description['hosts']):

@@ -30,7 +30,8 @@ libvirt_conn.lookupByName.return_value = mock.Mock(**{
     'info.return_value': [1], 'create.return_value': True})
 libvirt_conn.networkLookupByName.return_value = mock.Mock(**{
     'DHCPLeases.return_value': [{'mac': '52:54:00:01:02:03',
-                                 'ipaddr': '1.2.3.4'}]})
+                                 'ipaddr': '1.2.3.4'}],
+    'bridgeName.return_value': 'br0'})
 
 
 class FakeLibvirt(object):
@@ -72,22 +73,24 @@ class TestVirtualizor(testtools.TestCase):
                          '^([0-9a-fA-F]{2}:){5}([0-9a-fA-F]{2})$')
 
     @mock.patch('virtualizor.subprocess.call')
-    @mock.patch('virtualizor.Hypervisor.call', return_value=0)
-    def test_main(self, sub_call, hyp_call):
+    @mock.patch('virtualizor.Hypervisor.call', mock.Mock(return_value=0))
+    @mock.patch('subprocess.check_output', mock.Mock(return_value=""))
+    def test_main(self, sub_call):
         self.virtualizor.main(['virt_platform_qcow2.yml.sample', 'bar',
                                '--pub-key-file',
                                'virt_platform_qcow2.yml.sample'])
-        self.assertEqual(sub_call.call_count, 50)
+        self.assertEqual(sub_call.call_count, 10)
         self.assertEqual(libvirt_conn.networkCreateXML.call_count, 1)
         self.assertEqual(libvirt_conn.defineXML.call_count, 5)
 
     @mock.patch('virtualizor.subprocess.call')
-    @mock.patch('virtualizor.Hypervisor.call', return_value=0)
-    def test_main_with_replace(self, sub_call, hyp_call):
+    @mock.patch('virtualizor.Hypervisor.call', mock.Mock(return_value=0))
+    @mock.patch('subprocess.check_output', mock.Mock(return_value=""))
+    def test_main_with_replace(self, sub_call):
         self.virtualizor.main(['--cleanup', 'virt_platform_qcow2.yml.sample',
                                'bar', '--pub-key-file',
                                'virt_platform_qcow2.yml.sample'])
-        self.assertEqual(sub_call.call_count, 50)
+        self.assertEqual(sub_call.call_count, 10)
         self.assertEqual(libvirt_conn.networkCreateXML.call_count, 2)
         self.assertEqual(libvirt_conn.defineXML.call_count, 5)
 
