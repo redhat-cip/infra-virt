@@ -234,6 +234,7 @@ class Host(object):
         self.dom = None
         self.hostname = host_definition['hostname']
         self.files = host_definition.get('files', [])
+        self.bootcmds = host_definition.get('bootcmds', [])
         self.hostname_with_prefix = "%s_%s" % (conf.prefix, self.hostname)
 
         self.meta = {'hostname': host_definition['hostname'],
@@ -380,6 +381,8 @@ class Host(object):
                     '/sbin/iptables -t nat -A POSTROUTING -o ' +
                     nic['name'] +
                     ' -j MASQUERADE')
+        for bootcmd in self.bootcmds:
+            user_data['bootcmd'].append(bootcmd)
 
         contents = {
             'user-data': "#cloud-config\n" + yaml.dump(user_data),
