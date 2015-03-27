@@ -146,8 +146,8 @@ def _get_files(config_path):
                 m = re.match(r"config\([\"'](.+?)[\"'].*write\(([\S\s]*''')",
                              line, re.MULTILINE)
                 file_path = m.group(1)
-                # For the moment, we only use collect the network configuration
-                if not file_path.startswith("/etc/sysconfig"):
+                # For the moment, we keep our fstab
+                if file_path.startswith("/etc/fstab"):
                     continue
                 files[host['hostname']].append({
                     'path': file_path,
