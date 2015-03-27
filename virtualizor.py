@@ -234,7 +234,9 @@ class Host(object):
         self.dom = None
         self.hostname = host_definition['hostname']
         self.files = host_definition.get('files', [])
-        self.bootcmds = host_definition.get('bootcmds', [])
+        self.bootcmd = host_definition.get('bootcmd', [])
+        self.runcmd = host_definition.get('runcmd', [])
+        self.write_files = host_definition.get('write_files', [])
         self.hostname_with_prefix = "%s_%s" % (conf.prefix, self.hostname)
 
         self.meta = {'hostname': host_definition['hostname'],
@@ -307,7 +309,7 @@ class Host(object):
             ],
             'bootcmd': [
                 '/sbin/sysctl -p'
-            ]
+            ],
         }
         user_data['write_files'] = self.files
         default_user_data = [
@@ -386,9 +388,9 @@ class Host(object):
                         nic['name'] +
                         ' -j MASQUERADE')
 
-
-        for bootcmd in self.bootcmds:
-            user_data['bootcmd'].append(bootcmd)
+        user_data['bootcmd'] += self.bootcmd
+        user_data['runcmd'] += self.runcmd
+        user_data['write_files'] += self.write_files
 
         contents = {
             'user-data': "#cloud-config\n" + yaml.dump(user_data),
