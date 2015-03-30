@@ -37,7 +37,7 @@ LOG_DIR=${LOG_DIR:-"$(pwd)/logs"}
 SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-""}
 
 SSHOPTS="-oBatchMode=yes -oCheckHostIP=no -oHashKnownHosts=no  -oStrictHostKeyChecking=no -oPreferredAuthentications=publickey  -oChallengeResponseAuthentication=no -oKbdInteractiveDevices=no -oUserKnownHostsFile=/dev/null -oControlPath=~/.ssh/control-%r@%h:%p -oControlMaster=auto -oControlPersist=30"
-
+SSHEXTRAOPTS="-oTCPKeepAlive=yes -oServerAliveInterval=600"
 
 
 ### Handler Functions
@@ -331,7 +331,7 @@ call_jenkins_job() {
 
     jenkins_log_file="/var/lib/jenkins/jobs/${jenkins_job_name}/builds/1/log"
     (
-        ssh ${SSHOPTS} root@${installserverip} "
+        ssh ${SSHOPTS} ${SSHEXTRAOPTS} root@${installserverip} "
     while true; do
         [ -f ${jenkins_log_file} ] && tail -n 1000 -f ${jenkins_log_file}
         sleep 1
@@ -340,7 +340,7 @@ call_jenkins_job() {
     tail_job=$!
 
     # Wait for the first job to finish
-    ssh ${SSHOPTS} root@${installserverip} "
+    ssh ${SSHOPTS} ${SSHEXTRAOPTS} root@${installserverip} "
         while true; do
             test -f /var/lib/jenkins/jobs/${jenkins_job_name}/builds/1/build.xml && break;
             sleep 1;
