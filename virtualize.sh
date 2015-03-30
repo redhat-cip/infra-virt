@@ -36,6 +36,8 @@ arguments:
     -p|--prefix                   Change the platform's prefix, default: unix user
     -s|--socks                    Create a socks server to test your platform
     -t|--tempest                  Launch the sanity job at the end of a deployement
+    -l|--logs                     Fetch the logs from elasticesearch and upload them
+                                  into Swift
 
 For example:
 ./virtualize.sh -H localhost -e '--replace' I.1.2.1/
@@ -53,7 +55,7 @@ debug() {
 
 ### Arguments parsing
 
-ARGS=$(getopt -o w:v:ste:p:dH:h -l "wordkir:,virt:,socks,tempest,extra:,platform,debug,hypervisor:,help,prefix:" -- "$@");
+ARGS=$(getopt -o w:v:stle:p:dH:h -l "wordkir:,virt:,socks,tempest,logs,extra:,platform,debug,hypervisor:,help,prefix:" -- "$@");
 #Bad arguments
 if [ $? -ne 0 ]; then
     usage
@@ -109,6 +111,10 @@ while true; do
             tempest="True"
             shift;
             ;;
+        -l|--logs)
+            logs="True"
+            shift;
+            ;;
         --)
             shift
             break
@@ -134,11 +140,13 @@ if [ "${tempest}x" == "Truex" ]; then
     call_jenkins_job "sanity"
 fi
 
-# Dump elasticsearch logs into ${LOG_DIR},
-# upload_logs will update the dump in swift.
-$ORIG/dumpelastic.py --url http://${installserverip}:9200 --output-dir ${LOG_DIR}
+if [ "${logs}x" == "Truex" ]; then
+    # Dump elasticsearch logs into ${LOG_DIR},
+    # upload_logs will update the dump in swift.
+    $ORIG/dumpelastic.py --url http://${installserverip}:9200 --output-dir ${LOG_DIR}
 
-upload_logs
+    upload_logs
+fi
 
 #ssh $SSHOPTS -A root@$installserverip configure.sh
 
