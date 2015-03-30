@@ -360,7 +360,7 @@ create_socks() {
     local mac=$(get_mac ${router_name})
     local routerip=$(get_ip ${mac})
 
-    portlist=$(ssh ${SSHOPTS} root@${virthost} netstat -lntp | awk '{print $4}' | awk -F':' '{print $NF}' | grep 108.)
+    portlist=$(ssh ${SSHOPTS} root@${virthost} netstat -lntp | awk '{print $4}' | awk -F':' '{print $NF}' | grep 108. || true)
     while [ "${portlist}x" != "x" ] ; do
         if [ $(echo ${portlist} | grep ${port} | wc -l) -eq 1 ]; then
             ((port++))
