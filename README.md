@@ -23,6 +23,7 @@ We use a Fedora 21 with the following extra packages:
 - libvirt
 - mtools
 - qemu-kvm
+- iptables-services
 
 You will need to disable firewalld and enable libvirt:
 
