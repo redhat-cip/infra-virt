@@ -70,7 +70,7 @@ get_ip() {
 
 get_mac() {
     local name=$1
-    local mac=$(ssh ${SSHOPTS} root@${virthost} cat /etc/libvirt/qemu/${PREFIX}_${name}.xml|xmllint --xpath 'string(/domain/devices/interface[last()]/mac/@address)' -)
+    local mac=$(ssh ${SSHOPTS} root@${virthost} cat /etc/libvirt/qemu/${PREFIX}_${name}.xml|xmllint --xpath 'string(/domain/devices/interface/source[@network = "nat"]/../mac/@address)' -)
     echo ${mac}
 }
 
