@@ -156,3 +156,13 @@ $ cd ~/infra-virt/
 $ ./virtualizor.py virt_platform.yml my-hypervisor-node --cleanup --pub-key-file ~/.ssh/boa.pub
 ```
 
+## Troubleshooting
+
+Issue :
+
+```
+./virtualizor.py ...
+libvirt.libvirtError: internal error: Unable to apply rule 'The name org.fedoraproject.FirewallD1 was not provided by any .service files'
+```
+
+Solution : libvirtd restart is needed between firewalld stopped and iptables started.
