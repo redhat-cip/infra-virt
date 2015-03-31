@@ -77,7 +77,7 @@ optional arguments:
 ### Virtualizor
 
 ```sh
-usage: virtualizor.py [-h] [--replace] [--pub-key-file PUB_KEY_FILE]
+usage: virtualizor.py [-h] [--cleanup] [--pub-key-file PUB_KEY_FILE]
                       [--prefix PREFIX] [--public_network PUBLIC_NETWORK]
                       input_file target_host
 
@@ -91,23 +91,23 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --replace             existing conflicting resources will be remove
-                        recreated.
+  --cleanup             existing resources with the same prefix will be remove
+                        first. (default: False)
   --pub-key-file PUB_KEY_FILE
                         the path to the SSH public key file that must be
                         injected in the install-server root and jenkins
-                        account
+                        account (default: [])
   --prefix PREFIX       optional prefix to put in the machine and network to
                         avoid conflict with resources create by another
                         virtualizor instance. Thanks to this parameter, the
                         user can run as virtualizor as needed on the same
-                        machine.
+                        machine. (default: default)
   --public_network PUBLIC_NETWORK
                         allow the user to pass the name of a libvirt NATed
                         network that will be used as a public network for the
                         install-server. This public network will by attached
                         to eth1 interface and IP address is associated using
-                        the DHCP.
+                        the DHCP. (default: nat)
 ```
 
 ### Example
@@ -135,7 +135,7 @@ platform. You may take a look at a sample in the virtualization directory.
 
 ```sh
 $ cd ~/infra-virt/
-$ ./virtualizor.py virt_platform.yml my-hypervisor-node --replace --pub-key-file ~/.ssh/boa.pub
+$ ./virtualizor.py virt_platform.yml my-hypervisor-node --cleanup --pub-key-file ~/.ssh/boa.pub
 ```
 
 ### virtualize.sh
