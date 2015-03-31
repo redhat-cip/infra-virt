@@ -2,15 +2,12 @@
 
 # Virtualization
 
-
-The virtualization directory contains the tools which aims to standardize the way
-we test an architecture in a virtual environment.
+Infra-Virt aims to standardize the way we test an architecture in a
+virtual environment.
 
 ## Prerequisites
 
 On the local machine:
-
-You must install libvirt-python first.
 
 ```sh
 pip install -r requirements.txt
@@ -74,10 +71,10 @@ optional arguments:
   --qcow                Boot on qcow image.
 ```
 
-### Virtualizor
+## Virtualizor
 
 ```sh
-usage: virtualizor.py [-h] [--replace] [--pub-key-file PUB_KEY_FILE]
+usage: virtualizor.py [-h] [--cleanup] [--pub-key-file PUB_KEY_FILE]
                       [--prefix PREFIX] [--public_network PUBLIC_NETWORK]
                       input_file target_host
 
@@ -91,26 +88,47 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --replace             existing conflicting resources will be remove
-                        recreated.
+  --cleanup             existing resources with the same prefix will be
+                        removed first. (default: False)
   --pub-key-file PUB_KEY_FILE
                         the path to the SSH public key file that must be
                         injected in the install-server root and jenkins
-                        account
+                        account (default: [])
   --prefix PREFIX       optional prefix to put in the machine and network to
                         avoid conflict with resources create by another
                         virtualizor instance. Thanks to this parameter, the
                         user can run as virtualizor as needed on the same
-                        machine.
+                        machine. (default: default)
   --public_network PUBLIC_NETWORK
                         allow the user to pass the name of a libvirt NATed
                         network that will be used as a public network for the
                         install-server. This public network will by attached
                         to eth1 interface and IP address is associated using
-                        the DHCP.
+                        the DHCP. (default: nat)
 ```
 
-### Example
+## virtualize.sh
+
+`virtualize.sh` is a script built on top of `virtualizor.py` to play SpinalStack deployment and upgrade.
+
+```sh
+$ ./virtualize.sh --help
+usage: virtualize.sh [OPTION] workdir1 workdir2 etc
+Collect architecture information from the edeploy directory as generated
+by config-tools/download.sh.
+
+optinal arguments:
+  -H|--hypervisor=name: change the hypervisor name, default ()
+arguments:
+virtualize.sh will use the first argument as the location of the
+SpinalStack environment to deploy. It will then upgrade the newly deployed
+SpinalStack to the following environment directory.
+
+For example: ./virtualize.sh I.1.2.1/
+will deploy environment from the I.1.2.1/ directory.
+```
+
+## Example
 
 ```sh
 $ cd ~
@@ -135,26 +153,16 @@ platform. You may take a look at a sample in the virtualization directory.
 
 ```sh
 $ cd ~/infra-virt/
-$ ./virtualizor.py virt_platform.yml my-hypervisor-node --replace --pub-key-file ~/.ssh/boa.pub
+$ ./virtualizor.py virt_platform.yml my-hypervisor-node --cleanup --pub-key-file ~/.ssh/boa.pub
 ```
 
-### virtualize.sh
+## Troubleshooting
 
-`virtualize.sh` is a script built on top of `virtualizor.py` to play SpinalStack deployment and upgrade.
+Issue :
 
-```sh
-$ ./virtualize.sh --help
-usage: virtualize.sh [OPTION] workdir1 workdir2 etc
-Collect architecture information from the edeploy directory as generated
-by config-tools/download.sh.
-
-optinal arguments:
-  -H|--hypervisor=name: change the hypervisor name, default ()
-arguments:
-virtualize.sh will use the first argument as the location of the
-SpinalStack environment to deploy. It will then upgrade the newly deployed
-SpinalStack to the following environment directory.
-
-For example: ./virtualize.sh I.1.2.1/
-will deploy environment from the I.1.2.1/ directory.
 ```
+./virtualizor.py ...
+libvirt.libvirtError: internal error: Unable to apply rule 'The name org.fedoraproject.FirewallD1 was not provided by any .service files'
+```
+
+Solution : libvirtd restart is needed between firewalld stopped and iptables started.
