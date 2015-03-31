@@ -267,7 +267,6 @@ class Host(object):
             cloud_init_image = self._create_cloud_init_image()
             self._register_disk(cloud_init_image)
 
-        self.meta['nics'][0]['boot_order'] = 2
         self.meta['disks'][0]['boot_order'] = 1
 
     def _create_cloud_init_image(self):
@@ -449,10 +448,14 @@ class Host(object):
         nic.setdefault('gateway', '')
         nic.setdefault('nat', False)
         nic.setdefault('vlan', False)
+        nic.setdefault('pxe', False)
         if nic['network_name'] == '__public_network__':
             nic['network_name'] = self.conf.public_network
         if nic['ip']:
             nic['bootproto'] = 'static'
+        if nic['pxe'] == True:
+            nic['boot_order'] = 2
+
         self.meta['nics'].append(nic)
 
     def dump_libvirt_xml(self):
