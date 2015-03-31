@@ -2,9 +2,8 @@
 
 # Virtualization
 
-
-The virtualization directory contains the tools which aims to standardize the way
-we test an architecture in a virtual environment.
+Infra-Virt aims to standardize the way we test an architecture in a
+virtual environment.
 
 ## Prerequisites
 
@@ -72,7 +71,7 @@ optional arguments:
   --qcow                Boot on qcow image.
 ```
 
-### Virtualizor
+## Virtualizor
 
 ```sh
 usage: virtualizor.py [-h] [--cleanup] [--pub-key-file PUB_KEY_FILE]
@@ -108,7 +107,28 @@ optional arguments:
                         the DHCP. (default: nat)
 ```
 
-### Example
+## virtualize.sh
+
+`virtualize.sh` is a script built on top of `virtualizor.py` to play SpinalStack deployment and upgrade.
+
+```sh
+$ ./virtualize.sh --help
+usage: virtualize.sh [OPTION] workdir1 workdir2 etc
+Collect architecture information from the edeploy directory as generated
+by config-tools/download.sh.
+
+optinal arguments:
+  -H|--hypervisor=name: change the hypervisor name, default ()
+arguments:
+virtualize.sh will use the first argument as the location of the
+SpinalStack environment to deploy. It will then upgrade the newly deployed
+SpinalStack to the following environment directory.
+
+For example: ./virtualize.sh I.1.2.1/
+will deploy environment from the I.1.2.1/ directory.
+```
+
+## Example
 
 ```sh
 $ cd ~
@@ -136,23 +156,3 @@ $ cd ~/infra-virt/
 $ ./virtualizor.py virt_platform.yml my-hypervisor-node --cleanup --pub-key-file ~/.ssh/boa.pub
 ```
 
-### virtualize.sh
-
-`virtualize.sh` is a script built on top of `virtualizor.py` to play SpinalStack deployment and upgrade.
-
-```sh
-$ ./virtualize.sh --help
-usage: virtualize.sh [OPTION] workdir1 workdir2 etc
-Collect architecture information from the edeploy directory as generated
-by config-tools/download.sh.
-
-optinal arguments:
-  -H|--hypervisor=name: change the hypervisor name, default ()
-arguments:
-virtualize.sh will use the first argument as the location of the
-SpinalStack environment to deploy. It will then upgrade the newly deployed
-SpinalStack to the following environment directory.
-
-For example: ./virtualize.sh I.1.2.1/
-will deploy environment from the I.1.2.1/ directory.
-```
