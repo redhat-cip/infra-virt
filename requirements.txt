@@ -1,4 +1,3 @@
-libvirt-python
 hardware>=0.8
 ipaddress
 jinja2
