@@ -28,6 +28,7 @@ installserverip=""
 virthost="localhost"
 platform="virt_platform.yml"
 tempest=""
+logs=""
 
 # Default values if not set by user env
 TIMEOUT_ITERATION=${TIMEOUT_ITERATION:-"150"}
