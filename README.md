@@ -9,6 +9,8 @@ virtual environment.
 
 On the local machine:
 
+You must install libvirt-python first.
+
 ```sh
 pip install -r requirements.txt
 ```
