@@ -88,8 +88,8 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --cleanup             existing resources with the same prefix will be remove
-                        first. (default: False)
+  --cleanup             existing resources with the same prefix will be
+                        removed first. (default: False)
   --pub-key-file PUB_KEY_FILE
                         the path to the SSH public key file that must be
                         injected in the install-server root and jenkins
