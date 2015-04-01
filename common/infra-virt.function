@@ -31,7 +31,7 @@ tempest=""
 logs=""
 
 # Default values if not set by user env
-TIMEOUT_ITERATION=${TIMEOUT_ITERATION:-"150"}
+TIMEOUT_ITERATION=${TIMEOUT_ITERATION:-"300"}
 LOG_DIR=${LOG_DIR:-"$(pwd)/logs"}
 [ -d ${LOG_DIR} ] || mkdir -p ${LOG_DIR}
 
