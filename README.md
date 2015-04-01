@@ -160,11 +160,24 @@ $ ./virtualizor.py virt_platform.yml my-hypervisor-node --cleanup --pub-key-file
 
 ## Troubleshooting
 
-Issue :
+**Issue :**
 
 ```
 ./virtualizor.py ...
 libvirt.libvirtError: internal error: Unable to apply rule 'The name org.fedoraproject.FirewallD1 was not provided by any .service files'
 ```
 
-Solution : libvirtd restart is needed between firewalld stopped and iptables started.
+**Solution :** libvirtd restart is needed between firewalld stopped and iptables started.
+
+**Issue :**
+
+```
+WARNING:root:Images url is not provided by the infra description, no images will be downloaded from the hypervisor.
+qemu-img: Could not open '/var/lib/libvirt/images/....qcow2': Could not open backing file: Could not open '/var/lib/libvirt/images/....qcow2': No such file or directory
+
+```
+
+**Solution :** In case you specify an image in the virt platform yaml, you have 2 solution.
+
+  * Have your image locally on the hypervisor `/var/lib/libvirt/images` directory.
+  * Add `images-url` in your yaml at root level. `images-url` is the base url for all your images.
