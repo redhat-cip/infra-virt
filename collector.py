@@ -146,8 +146,8 @@ def _get_files(config_path):
                 m = re.match(r"config\([\"'](.+?)[\"'].*write\(([\S\s]*''')",
                              line, re.MULTILINE)
                 file_path = m.group(1)
-                # For the moment, we only use collect the network configuration
-                if not file_path.startswith("/etc/sysconfig"):
+                # For the moment, we keep our fstab
+                if file_path.startswith("/etc/fstab"):
                     continue
                 files[host['hostname']].append({
                     'path': file_path,
@@ -285,6 +285,24 @@ def collect(config_path, qcow, sps_version, images_url, parse_configure_files):
                 "gateway": entry['ip'],
                 "network_name": "__public_network__"})
         virt_platform["hosts"][hostname]["nics"] = nics
+
+    for cmd_type in ('bootcmd', 'runcmd'):
+        for hostname in global_conf.get('infra_virt', {}):
+            try:
+                cmd = global_conf['infra_virt'][hostname][cmd_type]
+                assert type(cmd) == list
+                virt_platform['hosts'][hostname][cmd_type] = cmd
+            except KeyError:
+                pass
+
+    # Inject the cloud-init write_files section
+    user_data_path = config_path + "/../var/www/cloud-init/user-data"
+    if os.path.exists(user_data_path):
+        user_data_fd = open(user_data_path, 'r')
+        user_data = yaml.load(user_data_fd.read())
+        for hostname in global_conf["hosts"]:
+            virt_platform['hosts'][hostname]['write_files'] = user_data[
+                'write_files']
 
     if images_url:
         virt_platform["images-url"] = "%s/%s" % (images_url, sps_version)
