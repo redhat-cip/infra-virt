@@ -464,7 +464,7 @@ class Host(object):
             nic['network_name'] = self.conf.public_network
         if nic['ip']:
             nic['bootproto'] = 'static'
-        if nic['pxe'] == True:
+        if nic['pxe'] is True:
             nic['boot_order'] = 2
 
         self.meta['nics'].append(nic)
