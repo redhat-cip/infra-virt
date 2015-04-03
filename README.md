@@ -158,6 +158,16 @@ $ cd ~/infra-virt/
 $ ./virtualizor.py virt_platform.yml my-hypervisor-node --cleanup --pub-key-file ~/.ssh/boa.pub
 ```
 
+If your node are properly installed you can now connect to them via connect.sh.
+The `connect.sh` script will help you to find the IP and connect on a virtual server. Provide
+the profile declared in `virt_platform.yml` and the infra-virt prefix.
+
+```sh
+./connect.sh default router
+```
+
+The prefix is setted by `virtualizor.py` with `--prefix` argument. By default the prefix value is `default`.
+
 ## Troubleshooting
 
 **Issue :**
@@ -181,3 +191,7 @@ qemu-img: Could not open '/var/lib/libvirt/images/....qcow2': Could not open bac
 
   * Have your image locally on the hypervisor `/var/lib/libvirt/images` directory.
   * Add `images-url` in your yaml at root level. `images-url` is the base url for all your images.
+
+**Issue :** I'm unable to find my router IP address with `connect.sh`.
+
+**Solution :** Have a look in dnsmasq leases file : `/var/lib/libvirt/dnsmasq/nat.leases`
