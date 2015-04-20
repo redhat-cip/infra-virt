@@ -1,11 +1,23 @@
 [![Build Status](https://travis-ci.org/enovance/infra-virt.svg?branch=master)](https://travis-ci.org/enovance/infra-virt)
 
-# Virtualization
+# About
 
-Infra-Virt aims to standardize the way we test an architecture in a
-virtual environment.
+Tools to deploy a virtual infrastructure based on a YAML description file. It supports
+the following features:
 
-## Prerequisites
+- PXE or boot on image (QCOW2)
+- network configuration (bonding, 802.1Q, Jumbo Frame)
+- Nested KVM
+- snapshot support
+
+## A set of components
+
+- virtualizor.py: create the infrastructure from the YAML file
+- virtualize.sh: helper designed to deploy a OpenStack [SpinalStack](http://spinal-stack.readthedocs.org/en/latest/)
+- collector.py: create automatically the infrastructure YAML from an existing SpinalStack environment directory.
+- scenarios: light scripts to replay/validate an OpenStack upgrade
+
+# Prerequisites
 
 On the local machine:
 
@@ -37,7 +49,7 @@ sudo systemctl stop firewalld
 sudo systemctl start iptables
 ```
 
-### User account
+## User account
 
 At this point, you must create the user on the Hypervisor this way:
 
@@ -52,7 +64,7 @@ $ ssh root@localhost uname
 $ sudo uname
 ```
 
-## Collector
+# Collector
 
 ```sh
 $ ./collector.py --help
@@ -73,7 +85,7 @@ optional arguments:
   --qcow                Boot on qcow image.
 ```
 
-## Virtualizor
+# Virtualizor
 
 ```sh
 usage: virtualizor.py [-h] [--cleanup] [--pub-key-file PUB_KEY_FILE]
@@ -109,7 +121,7 @@ optional arguments:
                         the DHCP. (default: nat)
 ```
 
-## virtualize.sh
+# virtualize.sh
 
 `virtualize.sh` is a script built on top of `virtualizor.py` to play SpinalStack deployment and upgrade.
 
@@ -130,7 +142,7 @@ For example: ./virtualize.sh I.1.2.1/
 will deploy environment from the I.1.2.1/ directory.
 ```
 
-## Example
+# Example
 
 ```sh
 $ cd ~
@@ -168,7 +180,7 @@ the profile declared in `virt_platform.yml` and the infra-virt prefix.
 
 The prefix is setted by `virtualizor.py` with `--prefix` argument. By default the prefix value is `default`.
 
-## Troubleshooting
+# Troubleshooting
 
 **Issue :**
 
