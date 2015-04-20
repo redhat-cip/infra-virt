@@ -32,7 +32,7 @@ arguments:
     -H|--hypervisor=name          Set the hypervisor hostname, default (${virthost})
     -d|--debug                    Set the debug mode for this script, default: disabled
     -v|--virt=virt_platform.yml   Set the path to the infra's yaml, default: (${platform})
-    -e|--extra='--replace'        Add extra parameters to virtulizor.py
+    -e|--extra='--cleanup'        Add extra parameters to virtulizor.py
     -p|--prefix                   Change the platform's prefix, default: unix user
     -s|--socks                    Create a socks server to test your platform
     -t|--tempest                  Launch the sanity job at the end of a deployement
@@ -40,11 +40,11 @@ arguments:
                                   into Swift
 
 For example:
-./virtualize.sh -H localhost -e '--replace' I.1.2.1/
+./virtualize.sh -H localhost -e '--clean' I.1.2.1/
 will deploy the environment from the I.1.2.1/ directory.
 
 and
-./virtualize.sh -H localhost -e '--replace' -w ../config-tools/ --sockets --tempest
+./virtualize.sh -H localhost -e '--clean' -w ../config-tools/ --sockets --tempest
 will deploy the env in your directory config-tools/, create a tunnel socks and launch tempest"
 }
 
