@@ -144,6 +144,14 @@ will deploy environment from the I.1.2.1/ directory.
 
 # Example
 
+## Create a simple infrastructure
+
+```sh
+./virtualizor.py virt_platform_pxe.yml.sample localhost --pub-key-file ~/.ssh/id_rsa.pub --cleanup
+```
+
+## Spinal Stack
+
 ```sh
 $ cd ~
 $ git clone https://github.com/enovance/config-tools.git
