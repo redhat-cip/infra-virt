@@ -49,6 +49,19 @@ sudo systemctl stop firewalld
 sudo systemctl start iptables
 ```
 
+Ensure you have loaded kvm_intel module with nested virtualization support.
+
+```sh
+cat /sys/module/kvm_intel/parameters/nested
+```
+
+In case not, add the nested flag in the kvm-intel module loading line.
+
+```sh
+vi /etc/modprobe.d/kvm.conf
+options kvm-intel nested=y
+```
+
 ## User account
 
 At this point, you must create the user on the Hypervisor this way:
